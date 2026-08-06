@@ -1,0 +1,97 @@
+{
+  "provider": "zhvi+cad",
+  "source": "Zillow Research ZHVI (County, SFR+Condo mid-tier, smoothed SA)",
+  "sourceUrl": "https://files.zillowstatic.com/research/public_csvs/zhvi/County_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv",
+  "researchPage": "https://www.zillow.com/research/data/",
+  "asOf": "2026-06-30",
+  "pulledAt": "2026-08-06T23:23:12.559Z",
+  "method": "salePsf ≈ county ZHVI ÷ 1900 typical finished sf",
+  "typicalHomeSf": 1900,
+  "landMethod": "Prefer median assessed $/acre from vacant CAD parcels in sample; else static Houston-metro proxy. Not sales comps.",
+  "homeDealThreshold": 0.5,
+  "disclaimer": "Home $/sf from public ZHVI research (not MLS). Land $/acre from CAD sample or proxies. Assessor values ≠ list prices. Not ATTOM.",
+  "counties": [
+    {
+      "county": "Harris",
+      "state": "TX",
+      "medianHomePsf": 149,
+      "avgLandPerAcre": 135014,
+      "metro": "Houston",
+      "zhvi": 282169,
+      "landSource": "cad_median_blended_proxy",
+      "landSampleSize": 26,
+      "landNote": "Blended CAD vacant median ($42184/ac, n=26) with Houston-metro proxy ($185000/ac); CAD alone is often productivity/low-use assessed.",
+      "homeSource": "zhvi",
+      "homeNote": "County mid-tier ZHVI ÷ 1900 typical sf (not assessed $/sf)."
+    },
+    {
+      "county": "Fort Bend",
+      "state": "TX",
+      "medianHomePsf": 201,
+      "avgLandPerAcre": 165000,
+      "metro": "Houston",
+      "zhvi": 382635,
+      "landSource": "placeholder_proxy",
+      "landNote": "Land $/acre starts as Houston-metro proxy; raised from CAD vacant-parcel medians when available. ZHVI is home value, not land.",
+      "homeSource": "zhvi",
+      "homeNote": "County mid-tier ZHVI ÷ 1900 typical sf (not assessed $/sf)."
+    },
+    {
+      "county": "Montgomery",
+      "state": "TX",
+      "medianHomePsf": 183,
+      "avgLandPerAcre": 95000,
+      "metro": "Houston",
+      "zhvi": 346893,
+      "landSource": "placeholder_proxy",
+      "landNote": "Land $/acre starts as Houston-metro proxy; raised from CAD vacant-parcel medians when available. ZHVI is home value, not land.",
+      "homeSource": "zhvi",
+      "homeNote": "County mid-tier ZHVI ÷ 1900 typical sf (not assessed $/sf)."
+    },
+    {
+      "county": "Brazoria",
+      "state": "TX",
+      "medianHomePsf": 174,
+      "avgLandPerAcre": 72000,
+      "metro": "Houston",
+      "zhvi": 329948,
+      "landSource": "placeholder_proxy",
+      "landNote": "Land $/acre starts as Houston-metro proxy; raised from CAD vacant-parcel medians when available. ZHVI is home value, not land.",
+      "homeSource": "zhvi",
+      "homeNote": "County mid-tier ZHVI ÷ 1900 typical sf (not assessed $/sf)."
+    },
+    {
+      "county": "Galveston",
+      "state": "TX",
+      "medianHomePsf": 169,
+      "avgLandPerAcre": 88000,
+      "metro": "Houston",
+      "zhvi": 321285,
+      "landSource": "placeholder_proxy",
+      "landNote": "Land $/acre starts as Houston-metro proxy; raised from CAD vacant-parcel medians when available. ZHVI is home value, not land.",
+      "homeSource": "zhvi",
+      "homeNote": "County mid-tier ZHVI ÷ 1900 typical sf (not assessed $/sf)."
+    },
+    {
+      "county": "Waller",
+      "state": "TX",
+      "medianHomePsf": 193,
+      "avgLandPerAcre": 45000,
+      "metro": "Houston",
+      "zhvi": 366018,
+      "landSource": "placeholder_proxy",
+      "landNote": "Land $/acre starts as Houston-metro proxy; raised from CAD vacant-parcel medians when available. ZHVI is home value, not land.",
+      "homeSource": "zhvi",
+      "homeNote": "County mid-tier ZHVI ÷ 1900 typical sf (not assessed $/sf)."
+    }
+  ],
+  "fhfa": {
+    "placeName": "Houston-Pasadena-The Woodlands, TX",
+    "yoyPct": 1.3,
+    "latest": {
+      "year": 2026,
+      "period": 1,
+      "index": 410.73
+    }
+  }
+}

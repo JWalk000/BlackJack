@@ -30,14 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env
 .env*
 !.env.example
-
-# free open-data cache (regenerate with npm run data:pull)
-/data/cache/*
-!/data/cache/.gitkeep
-!/data/cache/README.md
 
 # vercel
 .vercel

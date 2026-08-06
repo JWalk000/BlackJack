@@ -1,259 +1,208 @@
 "use client";
 
-import {
-  COST_CATEGORIES,
-  COST_CATEGORY_LABELS,
-  buildTemplateItems,
-  emptyCostLine,
-  scaleCostItems,
-  sumCostItems,
-  type ScopeKind,
-} from "@/lib/cost-items";
-import type { CostItemCategory, CostLineItem } from "@/lib/types";
+import type { CostItem } from "@/lib/types";
+import { COST_CATEGORY_ORDER } from "@/lib/types";
+import { money, uid } from "@/lib/underwriting";
+import { Field, MoneyInput, inputClass } from "./ui";
 
-function money(n: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
+function sortCategories(cats: string[]): string[] {
+  const order = COST_CATEGORY_ORDER as readonly string[];
+  return [...cats].sort((a, b) => {
+    const ia = order.indexOf(a);
+    const ib = order.indexOf(b);
+    const sa = ia === -1 ? 999 : ia;
+    const sb = ib === -1 ? 999 : ib;
+    if (sa !== sb) return sa - sb;
+    return a.localeCompare(b);
+  });
 }
 
-const inputClass =
-  "w-full border border-line bg-paper px-2.5 py-1.5 text-sm outline-none ring-copper focus:ring-1";
-
-type CostItemizerProps = {
-  scope: ScopeKind;
-  items: CostLineItem[];
-  /** Fallback total when seeding from a flat rehab budget */
-  flatBudget: number;
-  /** Regional construction suggestion */
-  modelBudget: number;
-  onChange: (items: CostLineItem[]) => void;
-};
-
 export function CostItemizer({
-  scope,
   items,
-  flatBudget,
-  modelBudget,
   onChange,
-}: CostItemizerProps) {
-  const total = sumCostItems(items);
+  onResetTemplate,
+  propertyClass,
+  buildMode,
+}: {
+  items: CostItem[];
+  onChange: (items: CostItem[]) => void;
+  onResetTemplate?: () => void;
+  propertyClass?: string;
+  buildMode?: string;
+}) {
+  const total = items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
 
-  function updateItem(id: string, patch: Partial<CostLineItem>) {
+  function update(id: string, patch: Partial<CostItem>) {
     onChange(items.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   }
 
-  function removeItem(id: string) {
+  function remove(id: string) {
     onChange(items.filter((i) => i.id !== id));
   }
 
-  function addLine() {
-    onChange([...items, emptyCostLine("other")]);
+  function add() {
+    onChange([
+      ...items,
+      {
+        id: uid("cost"),
+        category: "Custom",
+        label: "New line item",
+        amount: 0,
+        notes: "",
+      },
+    ]);
   }
 
-  function seedFromTemplate(target: number) {
-    onChange(buildTemplateItems(scope, target));
-  }
+  const byCategory = items.reduce<Record<string, CostItem[]>>((acc, item) => {
+    const key = item.category || "Other";
+    (acc[key] ??= []).push(item);
+    return acc;
+  }, {});
 
-  function scaleTo(target: number) {
-    if (items.length === 0) {
-      seedFromTemplate(target);
-      return;
-    }
-    onChange(scaleCostItems(items, target));
-  }
+  const categories = sortCategories(Object.keys(byCategory));
 
-  const byCategory = COST_CATEGORIES.map((cat) => ({
-    cat,
-    lines: items.filter((i) => i.category === cat),
-  })).filter((g) => g.lines.length > 0);
+  const softTotal = items
+    .filter((i) =>
+      /soft/i.test(i.category || ""),
+    )
+    .reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const hardTotal = items
+    .filter(
+      (i) =>
+        /hard|mep|csi/i.test(i.category || "") &&
+        !/soft/i.test(i.category || ""),
+    )
+    .reduce((s, i) => s + (Number(i.amount) || 0), 0);
 
-  // Lines with categories not in filter shouldn't vanish - they all map
-  const allShown = new Set(byCategory.flatMap((g) => g.lines.map((l) => l.id)));
-  const orphan = items.filter((i) => !allShown.has(i.id));
+  const scopeLabel =
+    propertyClass === "commercial"
+      ? buildMode === "rehab"
+        ? "Commercial rehab · CSI soft + division hard costs"
+        : "Commercial ground-up · CSI soft + division hard costs"
+      : buildMode === "new_build"
+        ? "Residential ground-up · NAHB-style soft + hard"
+        : "Residential rehab · soft + hard work packages";
 
   return (
-    <div className="border border-line bg-paper p-5 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-sage">
-            03 · Itemized scope
+          <p className="page-label">Itemized budget</p>
+          <p className="mt-2 font-display text-4xl tracking-tight text-ink">
+            {money(total)}
           </p>
-          <h2 className="mt-2 font-display text-2xl text-ink">
-            {scope === "rehab" ? "Remodel cost detail" : "Build cost detail"}
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm text-steel">
-            Break construction into trades and rooms. Line totals drive the deal
-            construction / rehab budget.
+          <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted">
+            {scopeLabel}. Enter your market dollars — no baked-in survey
+            prices. Totals feed final numbers.
           </p>
+          {(softTotal > 0 || hardTotal > 0) && (
+            <p className="mt-3 text-xs text-muted">
+              Soft {money(softTotal)}
+              {" · "}
+              Hard {money(hardTotal)}
+              {total - softTotal - hardTotal > 0
+                ? ` · Other ${money(total - softTotal - hardTotal)}`
+                : null}
+            </p>
+          )}
         </div>
-        <div className="text-right">
-          <p className="text-[10px] uppercase tracking-wider text-sage">
-            Itemized total
-          </p>
-          <p className="mt-1 font-display text-2xl text-ink">{money(total)}</p>
+        <div className="flex flex-wrap gap-2">
+          {onResetTemplate ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  costsHaveAmounts(items) &&
+                  !window.confirm(
+                    "Replace itemization with the template for this deal type? Entered amounts will be cleared.",
+                  )
+                ) {
+                  return;
+                }
+                onResetTemplate();
+              }}
+              className="btn-ghost"
+            >
+              Reset cost template
+            </button>
+          ) : null}
+          <button type="button" onClick={add} className="btn-signal">
+            Add line item
+          </button>
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() =>
-            seedFromTemplate(flatBudget > 0 ? flatBudget : modelBudget)
-          }
-          className="border border-line px-3 py-1.5 text-xs font-medium text-ink transition hover:border-ink"
-        >
-          {items.length ? "Reset from template" : "Start with template"} ·{" "}
-          {money(flatBudget > 0 ? flatBudget : modelBudget)}
-        </button>
-        <button
-          type="button"
-          onClick={() => seedFromTemplate(modelBudget)}
-          className="border border-line px-3 py-1.5 text-xs font-medium text-ink transition hover:border-ink"
-        >
-          Seed from regional model · {money(modelBudget)}
-        </button>
-        {items.length > 0 && Math.abs(total - modelBudget) > 1 && (
-          <button
-            type="button"
-            onClick={() => scaleTo(modelBudget)}
-            className="border border-line px-3 py-1.5 text-xs font-medium text-ink transition hover:border-ink"
-          >
-            Scale items to model
-          </button>
-        )}
-        {items.length > 0 && (
-          <button
-            type="button"
-            onClick={() => onChange([])}
-            className="border border-line px-3 py-1.5 text-xs text-steel transition hover:border-ink hover:text-ink"
-          >
-            Clear all lines
-          </button>
-        )}
-      </div>
+      {categories.map((category) => {
+        const rows = byCategory[category];
+        const sub = rows.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+        return (
+          <section key={category}>
+            <h3 className="mb-3 flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-signal">
+              <span className="h-px min-w-8 flex-1 bg-line" />
+              <span>{category}</span>
+              <span className="normal-case tracking-normal text-muted">
+                {money(sub)}
+              </span>
+              <span className="h-px min-w-8 flex-1 bg-line" />
+            </h3>
+            <div className="space-y-3">
+              {rows.map((item) => (
+                <div
+                  key={item.id}
+                  className="panel grid gap-3 p-4 sm:grid-cols-[1.2fr_1fr_8rem_auto]"
+                >
+                  <Field label="Label">
+                    <input
+                      className={inputClass}
+                      value={item.label}
+                      onChange={(e) =>
+                        update(item.id, { label: e.target.value })
+                      }
+                    />
+                    {item.notes ? (
+                      <p className="mt-1 text-xs text-muted">{item.notes}</p>
+                    ) : null}
+                  </Field>
+                  <Field label="Category">
+                    <input
+                      className={inputClass}
+                      value={item.category}
+                      onChange={(e) =>
+                        update(item.id, { category: e.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="Amount">
+                    <MoneyInput
+                      value={item.amount}
+                      onChange={(amount) => update(item.id, { amount })}
+                    />
+                  </Field>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => remove(item.id)}
+                      className="btn-ghost w-full sm:w-auto"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })}
 
       {items.length === 0 ? (
-        <p className="mt-8 border border-dashed border-line bg-limestone px-4 py-8 text-center text-sm text-steel">
-          No line items yet. Start with a remodel or full-build template, then
-          edit amounts and notes for each trade.
+        <p className="border border-dashed border-line bg-stone/60 px-4 py-12 text-center text-sm text-muted">
+          No cost lines. Use Reset cost template or add custom items.
         </p>
-      ) : (
-        <div className="mt-6 space-y-6">
-          {byCategory.map(({ cat, lines }) => {
-            const sub = sumCostItems(lines);
-            return (
-              <div key={cat}>
-                <div className="mb-2 flex items-baseline justify-between gap-3 border-b border-line pb-1">
-                  <h3 className="text-[11px] font-medium uppercase tracking-[0.14em] text-sage">
-                    {COST_CATEGORY_LABELS[cat]}
-                  </h3>
-                  <span className="font-mono text-xs text-steel">
-                    {money(sub)}
-                    {total > 0 ? ` · ${((sub / total) * 100).toFixed(0)}%` : ""}
-                  </span>
-                </div>
-                <ul className="space-y-2">
-                  {lines.map((line) => (
-                    <CostLineRow
-                      key={line.id}
-                      line={line}
-                      onChange={(patch) => updateItem(line.id, patch)}
-                      onRemove={() => removeItem(line.id)}
-                    />
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-          {orphan.map((line) => (
-            <CostLineRow
-              key={line.id}
-              line={line}
-              onChange={(patch) => updateItem(line.id, patch)}
-              onRemove={() => removeItem(line.id)}
-            />
-          ))}
-        </div>
-      )}
-
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-        <button
-          type="button"
-          onClick={addLine}
-          className="text-sm font-medium text-copper hover:text-copper-deep"
-        >
-          + Add line item
-        </button>
-        {total > 0 && (
-          <p className="text-xs text-sage">
-            Sum of lines = deal construction cost
-          </p>
-        )}
-      </div>
+      ) : null}
     </div>
   );
 }
 
-function CostLineRow({
-  line,
-  onChange,
-  onRemove,
-}: {
-  line: CostLineItem;
-  onChange: (patch: Partial<CostLineItem>) => void;
-  onRemove: () => void;
-}) {
-  return (
-    <li className="grid gap-2 sm:grid-cols-[7.5rem_1fr_6.5rem_auto] sm:items-center">
-      <select
-        className={inputClass}
-        value={line.category}
-        onChange={(e) =>
-          onChange({ category: e.target.value as CostItemCategory })
-        }
-        aria-label="Category"
-      >
-        {COST_CATEGORIES.map((c) => (
-          <option key={c} value={c}>
-            {COST_CATEGORY_LABELS[c]}
-          </option>
-        ))}
-      </select>
-      <div className="grid gap-1 sm:grid-cols-[1fr_minmax(0,10rem)]">
-        <input
-          className={inputClass}
-          placeholder="Description"
-          value={line.name}
-          onChange={(e) => onChange({ name: e.target.value })}
-          aria-label="Description"
-        />
-        <input
-          className={inputClass}
-          placeholder="Notes"
-          value={line.notes ?? ""}
-          onChange={(e) => onChange({ notes: e.target.value })}
-          aria-label="Notes"
-        />
-      </div>
-      <input
-        type="number"
-        min={0}
-        className={`${inputClass} font-mono text-right`}
-        value={line.amount}
-        onChange={(e) => onChange({ amount: Number(e.target.value) || 0 })}
-        aria-label="Amount"
-      />
-      <button
-        type="button"
-        onClick={onRemove}
-        className="px-2 py-1.5 text-xs text-steel hover:text-ink"
-        aria-label="Remove line"
-      >
-        Remove
-      </button>
-    </li>
-  );
+function costsHaveAmounts(items: CostItem[]): boolean {
+  return items.some((i) => Number(i.amount) > 0);
 }

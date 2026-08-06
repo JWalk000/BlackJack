@@ -1,64 +1,186 @@
 @import "tailwindcss";
 
 :root {
-  /* Architectural: deep olive ink, limestone field, oxidized copper accent */
-  --ink: #0a1410;
-  --forest: #163028;
-  --canopy: #2a4f40;
-  --sage: #6a8b79;
-  --mist: #c8d6ce;
-  --limestone: #e9e4d9;
-  --paper: #f3efe7;
-  --copper: #c2743a;
-  --copper-deep: #8f4d24;
-  --steel: #3a464e;
-  --line: rgba(10, 20, 16, 0.12);
-  --background: var(--paper);
-  --foreground: var(--ink);
+  --ink: #0c0f0e;
+  --forest: #12352c;
+  --canopy: #1f5c48;
+  --moss: #3d8f6e;
+  --sand: #efe6d4;
+  --stone: #f0ebe2;
+  --paper: #f7f3eb;
+  --line: #d2c9b8;
+  --muted: #5a5e59;
+  --brass: #d4a017;
+  --brass-deep: #a87b0c;
+  --signal: #e85d04;
+  --profit: #1f6b4a;
+  --loss: #a33a2c;
+  --surface: #ffffff;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --color-ink: var(--ink);
   --color-forest: var(--forest);
   --color-canopy: var(--canopy);
-  --color-sage: var(--sage);
-  --color-mist: var(--mist);
-  --color-limestone: var(--limestone);
+  --color-moss: var(--moss);
+  --color-sand: var(--sand);
+  --color-stone: var(--stone);
   --color-paper: var(--paper);
-  --color-copper: var(--copper);
-  --color-copper-deep: var(--copper-deep);
-  --color-steel: var(--steel);
   --color-line: var(--line);
-  --font-sans: var(--font-manrope);
-  --font-display: var(--font-fraunces);
-  --font-mono: var(--font-jetbrains);
+  --color-muted: var(--muted);
+  --color-brass: var(--brass);
+  --color-brass-deep: var(--brass-deep);
+  --color-signal: var(--signal);
+  --color-profit: var(--profit);
+  --color-loss: var(--loss);
+  --color-surface: var(--surface);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
 }
 
-* {
-  box-sizing: border-box;
+/* Base must live in @layer so unlayered rules don't beat Tailwind utilities
+   (e.g. a { color: inherit } was wiping text-paper on Link buttons). */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100%;
+    background:
+      radial-gradient(900px 420px at 0% 0%, rgba(232, 93, 4, 0.06), transparent 55%),
+      radial-gradient(800px 400px at 100% 10%, rgba(18, 53, 44, 0.07), transparent 50%),
+      var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    opacity: 0.4;
+  }
+
+  ::selection {
+    background: rgba(232, 93, 4, 0.25);
+  }
 }
 
-html {
-  scroll-behavior: smooth;
+/* Shared studio UI language (app pages) */
+.page-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--signal);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-manrope), system-ui, sans-serif;
+.page-title {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.05;
 }
 
-::selection {
-  background: var(--mist);
+.btn-forest {
+  background: var(--forest);
+  color: var(--paper);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.65rem 1.25rem;
+  transition: background 0.15s ease;
+}
+.btn-forest:hover {
+  background: var(--canopy);
+}
+
+.btn-signal {
+  background: var(--signal);
+  color: var(--paper);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.75rem 1.5rem;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.btn-signal:hover {
+  background: var(--brass);
   color: var(--ink);
 }
 
+.btn-ghost {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.875rem;
+  padding: 0.65rem 1.25rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.btn-ghost:hover {
+  border-color: var(--ink);
+  background: var(--surface);
+}
+
+.panel {
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.select-tile {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.select-tile:hover {
+  border-color: var(--canopy);
+}
+.select-tile[data-active="true"] {
+  border-color: var(--forest);
+  background: var(--forest);
+  color: var(--paper);
+}
+
+.studio-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 0.65rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.studio-input:focus {
+  border-color: var(--signal);
+  box-shadow: 0 0 0 3px rgba(232, 93, 4, 0.12);
+}
+.studio-input::placeholder {
+  color: color-mix(in srgb, var(--muted) 55%, transparent);
+}
+
+/* Motion */
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(28px);
   }
   to {
     opacity: 1;
@@ -66,16 +188,7 @@ body {
   }
 }
 
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes draw-line {
+@keyframes draw {
   from {
     transform: scaleX(0);
   }
@@ -84,52 +197,92 @@ body {
   }
 }
 
-@keyframes pulse-soft {
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes ken {
+  from {
+    transform: scale(1.06) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.14) translate3d(-1.5%, -1%, 0);
+  }
+}
+
+@keyframes grit {
   0%,
   100% {
-    opacity: 0.55;
+    opacity: 0.35;
   }
   50% {
-    opacity: 1;
+    opacity: 0.5;
   }
 }
 
 .animate-rise {
-  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-
-.animate-rise-delay-1 {
-  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+.animate-rise-1 {
+  animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
 }
-
-.animate-rise-delay-2 {
-  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
+.animate-rise-2 {
+  animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
 }
-
-.animate-rise-delay-3 {
-  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.36s both;
+.animate-rise-3 {
+  animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.36s both;
 }
-
-.animate-fade {
-  animation: fade-in 1.2s ease both;
-}
-
 .animate-draw {
   transform-origin: left;
-  animation: draw-line 1s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+  animation: draw 1s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
 }
-
-.animate-pulse-soft {
-  animation: pulse-soft 2.8s ease-in-out infinite;
+.animate-marquee {
+  animation: marquee 28s linear infinite;
 }
-
-.hero-grid {
-  background-image:
-    linear-gradient(rgba(245, 241, 234, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(245, 241, 234, 0.04) 1px, transparent 1px);
-  background-size: 64px 64px;
+.animate-ken {
+  animation: ken 22s ease-in-out infinite alternate;
 }
-
 .texture-grain {
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  animation: grit 8s ease-in-out infinite;
+  mix-blend-mode: overlay;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-rise-1,
+  .animate-rise-2,
+  .animate-rise-3,
+  .animate-draw,
+  .animate-marquee,
+  .animate-ken,
+  .texture-grain {
+    animation: none !important;
+  }
+}
+
+/* Bank package print */
+@media print {
+  body {
+    background: #fff !important;
+  }
+
+  .bank-package {
+    background: #fff !important;
+  }
+
+  .package-sheet {
+    max-width: none !important;
+    padding: 0.4in 0.5in !important;
+  }
+
+  a[href]::after {
+    content: none !important;
+  }
 }

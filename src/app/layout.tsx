@@ -1,32 +1,25 @@
 import type { Metadata } from "next";
-import { Fraunces, Manrope, JetBrains_Mono } from "next/font/google";
-import { AppChrome } from "@/components/AppChrome";
-import { Providers } from "@/components/Providers";
+import { Fraunces, Source_Sans_3 } from "next/font/google";
+import { AppShell } from "@/components/AppShell";
+import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+const display = Fraunces({
   subsets: ["latin"],
-  axes: ["SOFT", "WONK", "opsz"],
+  variable: "--font-display",
+  display: "swap",
 });
 
-const manrope = Manrope({
-  variable: "--font-manrope",
+const body = Source_Sans_3({
   subsets: ["latin"],
-});
-
-const jetbrains = JetBrains_Mono({
-  variable: "--font-jetbrains",
-  subsets: ["latin"],
+  variable: "--font-body",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: {
-    default: "Estate — Residential & Multifamily Development",
-    template: "%s · Estate",
-  },
+  title: "Estate — Build your deal",
   description:
-    "Find and underwrite residential and multifamily deals — site screening, generative design, cost modeling, document review, and schedule control.",
+    "Build ground-up and rehab deals for residential and commercial real estate with full itemized costs and final numbers.",
 };
 
 export default function RootLayout({
@@ -35,14 +28,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${fraunces.variable} ${manrope.variable} ${jetbrains.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-paper text-ink font-sans">
-        <Providers>
-          <AppChrome>{children}</AppChrome>
-        </Providers>
+    <html lang="en" className={`${display.variable} ${body.variable}`}>
+      <body className="font-body antialiased">
+        <SiteHeader />
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

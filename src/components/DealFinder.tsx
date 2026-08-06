@@ -1,730 +1,860 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
-  BUILD_COSTS,
-  PRODUCT_META,
-  productsByCategory,
-  type MarketId,
-  type ProductType,
-} from "@/data/markets";
-import { coordsForLead, coordsForSubmarket } from "@/data/map-coords";
+  type AreaComp,
+  AREA_COMPS,
+  defaultCompsTable,
+  formatZhviAsOf,
+  getAreaCompsMeta,
+  hasLiveAreaComps,
+  HOME_DEAL_THRESHOLD,
+} from "@/data/area-comps";
 import {
-  OFF_MARKET_LEADS,
-  type OffMarketLead,
-  type OpportunityKind,
-} from "@/data/offmarket-leads";
-import { savePendingDeal, type PendingDeal } from "@/lib/deal-project";
+  getFinderInventory,
+  getFreeLeadsMeta,
+  inventoryMode,
+  type FreeLeadListing,
+} from "@/data/listings";
+import type { Listing, SampleListing } from "@/data/sample-listings";
 import {
-  getMarketMeta,
-  scoreDeals,
-  scoreOffMarketLeads,
-  type OffMarketResult,
-  type DealResult,
-} from "@/lib/deals";
-import type { MapPin } from "@/components/DealMap";
+  type ScoredListing,
+  filterAndRankListings,
+  formatDiscount,
+  formatUnitPrice,
+  osmBrowseUrl,
+  osmEmbedUrl,
+  scoreLead,
+} from "@/lib/deal-finder";
+import { createDeal, saveDeal, templateCostItems } from "@/lib/deals";
+import { money } from "@/lib/underwriting";
+import { Field, MoneyInput, NumberInput, inputClass } from "./ui";
 
-const DealMap = dynamic(() => import("@/components/DealMap"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full min-h-[360px] items-center justify-center bg-limestone text-sm text-steel">
-      Loading map…
-    </div>
-  ),
-});
-
-function money(n: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
-type ViewMode = "offmarket" | "submarkets";
-type DataSource = "sample" | "database" | "open_data" | "loading";
-
-type MarketSignal = {
-  placeName: string;
-  yoyPct: number | null;
-  fiveYearPct: number | null;
-  latest: { year: number; period: number } | null;
+type LeadForm = {
+  type: "home" | "land";
+  address: string;
+  city: string;
+  county: string;
+  state: string;
+  price: number;
+  buildingSf: number | null;
+  acres: number | null;
 };
 
-const KIND_OPTIONS: { id: OpportunityKind; label: string }[] = [
-  { id: "vacant_land", label: "Vacant land" },
-  { id: "teardown", label: "Teardowns" },
-  { id: "underimproved", label: "Underimproved" },
-];
+const emptyLead = (): LeadForm => ({
+  type: "home",
+  address: "",
+  city: "",
+  county: "Harris",
+  state: "TX",
+  price: 0,
+  buildingSf: null,
+  acres: null,
+});
 
-type LeadSourceLike = "sample" | "database" | "open_data" | string;
-
-function sourceLabel(src: DataSource) {
-  if (src === "loading") return "loading…";
-  if (src === "database") return "Postgres";
-  if (src === "open_data") return "real Houston CAD (HCAD+FBCAD)";
-  return "samples";
-}
-
-function normalizeSource(src?: LeadSourceLike): DataSource {
-  if (src === "database" || src === "open_data" || src === "sample") return src;
-  return "sample";
+function sourceBadge(listing: Listing | FreeLeadListing): string {
+  if (listing.source === "user") return "Your lead";
+  if (listing.source === "sample") return "Demo sample";
+  if (listing.provider === "hcad" || listing.id?.startsWith("hcad-"))
+    return "Harris CAD";
+  if (listing.provider === "fbcad" || listing.id?.startsWith("fbcad-"))
+    return "Fort Bend CAD";
+  if (listing.source === "free-cad") return "Open CAD";
+  return listing.provider || listing.source || "Open data";
 }
 
 export function DealFinder() {
   const router = useRouter();
-  const marketId: MarketId = "houston";
-  const [view, setView] = useState<ViewMode>("offmarket");
-  const [productType, setProductType] = useState<ProductType>("for_sale_sf");
-  const [targetMargin, setTargetMargin] = useState(15);
-  const [hardOverride, setHardOverride] = useState<string>("");
-  const [maxMiles, setMaxMiles] = useState(100);
-  const [onlyPasses, setOnlyPasses] = useState(true);
-  const [kinds, setKinds] = useState<OpportunityKind[]>([
-    "vacant_land",
-    "teardown",
-    "underimproved",
-  ]);
-  const [motivatedOnly, setMotivatedOnly] = useState(false);
-  const [leadPool, setLeadPool] = useState<OffMarketLead[]>(() =>
-    OFF_MARKET_LEADS.filter((l) => l.marketId === "houston"),
-  );
-  const [dataSource, setDataSource] = useState<DataSource>("loading");
-  const [signals, setSignals] = useState<MarketSignal[]>([]);
+  const inventory = useMemo(() => getFinderInventory(), []);
+  const leadsMeta = useMemo(() => getFreeLeadsMeta(), []);
+  const compsMeta = useMemo(() => getAreaCompsMeta(), []);
+  const mode = inventoryMode();
+
+  const [typeFilter, setTypeFilter] = useState<"all" | "home" | "land">("all");
+  const [maxPrice, setMaxPrice] = useState<number>(0);
+  const [mustPass, setMustPass] = useState(true);
+  const [countyFilter, setCountyFilter] = useState<string>("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [starting, setStarting] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const listItemRefs = useRef<Record<string, HTMLLIElement | null>>({});
+  const [userListings, setUserListings] = useState<Listing[]>([]);
+  const [lead, setLead] = useState<LeadForm>(emptyLead);
+  const [comps, setComps] = useState<AreaComp[]>(() => defaultCompsTable());
+  const [showComps, setShowComps] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    setDataSource("loading");
-    fetch(`/api/deals/leads?market=${marketId}`)
-      .then((r) => r.json())
-      .then(
-        (body: {
-          source?: LeadSourceLike;
-          leads?: OffMarketLead[];
-        }) => {
-          if (cancelled) return;
-          if (body.leads?.length) {
-            setLeadPool(body.leads);
-            setDataSource(normalizeSource(body.source));
-          } else {
-            setLeadPool(
-              OFF_MARKET_LEADS.filter((l) => l.marketId === marketId),
-            );
-            setDataSource("sample");
-          }
-        },
-      )
-      .catch(() => {
-        if (cancelled) return;
-        setLeadPool(OFF_MARKET_LEADS.filter((l) => l.marketId === marketId));
-        setDataSource("sample");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [marketId]);
+  const allListings = useMemo(
+    () => [...userListings, ...inventory],
+    [userListings, inventory],
+  );
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/data/signals?market=${marketId}`)
-      .then((r) => r.json())
-      .then(
-        (body: {
-          fhfa?: { metros?: MarketSignal[] } | null;
-        }) => {
-          if (cancelled) return;
-          setSignals(body.fhfa?.metros ?? []);
-        },
-      )
-      .catch(() => {
-        if (!cancelled) setSignals([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [marketId]);
-
-  useEffect(() => {
-    setSelectedId(null);
-  }, [view, marketId]);
-
-  const meta = getMarketMeta(marketId);
-  const grouped = productsByCategory(marketId);
-  const defaultHard =
-    BUILD_COSTS.find(
-      (b) => b.marketId === marketId && b.productType === productType,
-    )?.hardCostPsf ?? 0;
-
-  const hardCostOverride = useMemo(() => {
-    const override = hardOverride.trim() ? Number(hardOverride) : undefined;
-    return override && !Number.isNaN(override) ? override : undefined;
-  }, [hardOverride]);
-
-  const baseInputs = {
-    marketId,
-    productType,
-    targetMarginPct: targetMargin,
-    hardCostOverride,
-    maxMiles,
-  };
-
-  const leadResults = useMemo(
+  const ranked = useMemo(
     () =>
-      scoreOffMarketLeads(
+      filterAndRankListings(allListings, comps, {
+        type: typeFilter,
+        maxPrice: maxPrice > 0 ? maxPrice : null,
+        mustPass,
+        county: countyFilter || null,
+      }),
+    [allListings, comps, typeFilter, maxPrice, mustPass, countyFilter],
+  );
+
+  const selected =
+    ranked.find((l) => l.id === selectedId) ?? ranked[0] ?? null;
+
+  const leadScore = useMemo(
+    () =>
+      scoreLead(
         {
-          ...baseInputs,
-          kinds,
-          requireAbsenteeOrEstate: motivatedOnly,
+          type: lead.type,
+          price: lead.price,
+          buildingSf: lead.buildingSf,
+          acres: lead.acres,
+          county: lead.county,
+          state: lead.state,
         },
-        leadPool,
+        comps,
       ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      marketId,
-      productType,
-      targetMargin,
-      hardCostOverride,
-      maxMiles,
-      kinds,
-      motivatedOnly,
-      leadPool,
-    ],
+    [lead, comps],
   );
 
-  const subResults = useMemo(
-    () => scoreDeals(baseInputs),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [marketId, productType, targetMargin, hardCostOverride, maxMiles],
-  );
+  const counties = useMemo(() => {
+    const set = new Set(AREA_COMPS.map((c) => c.county));
+    allListings.forEach((l) => set.add(l.county));
+    return Array.from(set).sort();
+  }, [allListings]);
 
-  const visibleLeads = onlyPasses
-    ? leadResults.filter((r) => r.passes)
-    : leadResults;
-  const visibleSubs = onlyPasses
-    ? subResults.filter((r) => r.passes)
-    : subResults;
+  const cadAsOf =
+    leadsMeta.sources.find((s) => s.id === "hcad" || s.id === "fbcad")?.asOf ||
+    leadsMeta.asOf ||
+    "—";
 
-  const selectedLead = useMemo(
-    () => visibleLeads.find((r) => r.lead.id === selectedId) ?? null,
-    [visibleLeads, selectedId],
-  );
-
-  const leadPins: MapPin[] = useMemo(() => {
-    const pins: MapPin[] = [];
-    for (const r of visibleLeads) {
-      const pos = coordsForLead(r.lead);
-      if (!pos) continue;
-      pins.push({
-        id: r.lead.id,
-        position: pos,
-        title: r.lead.address,
-        subtitle: `${r.lead.city} · ${r.kindLabel}`,
-        passes: r.passes,
-        priceLabel: `${money(r.lead.askingOrAssessed)} site · ${(r.marginPct * 100).toFixed(0)}% margin`,
-      });
-    }
-    return pins;
-  }, [visibleLeads]);
-
-  const subPins: MapPin[] = useMemo(() => {
-    const pins: MapPin[] = [];
-    for (const r of visibleSubs) {
-      const pos = coordsForSubmarket(r.submarket.id);
-      if (!pos) continue;
-      pins.push({
-        id: r.submarket.id,
-        position: pos,
-        title: r.submarket.name,
-        subtitle: r.productLabel,
-        passes: r.passes,
-        priceLabel: `${money(r.salePsf)}/sf exit · ${(r.marginPct * 100).toFixed(0)}%`,
-      });
-    }
-    return pins;
-  }, [visibleSubs]);
-
-  const activePins = view === "offmarket" ? leadPins : subPins;
-
-  function selectId(id: string) {
-    setSelectedId(id);
-    const el = listItemRefs.current[id];
-    el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  function startDealFromListing(listing: ScoredListing | Listing | SampleListing) {
+    const isLand = listing.type === "land";
+    const lotSf =
+      listing.acres != null && listing.acres > 0
+        ? Math.round(listing.acres * 43560)
+        : null;
+    const deal = createDeal({
+      buildMode: isLand ? "new_build" : "rehab",
+      propertyClass: isLand ? "commercial" : "residential",
+      property: {
+        name: listing.title,
+        description: [
+          listing.notes,
+          listing.priceMethod,
+          listing.apn ? `APN ${listing.apn}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        address: listing.address,
+        city: listing.city,
+        state: listing.state,
+        zip: listing.zip,
+        apn: listing.apn ?? "",
+        bedrooms: null,
+        bathsFull: null,
+        bathsHalf: null,
+        yearBuilt: null,
+        buildingSf: listing.buildingSf ?? null,
+        lotSf,
+        units: isLand ? null : 1,
+        floors: isLand ? null : 1,
+        propertyType: isLand ? "Land / development" : "Single family",
+        zoning: "",
+        condition: isLand ? "Vacant" : "Fair",
+        lastSaleAmount: null,
+        lastSaleDate: "",
+        taxAssessment: listing.price,
+        taxAmount: null,
+      },
+      assumptions: {
+        purchasePrice: listing.price,
+        closingCosts: Math.round(listing.price * 0.04),
+        closingCostsManual: false,
+        projectMonths: 6,
+        monthsToSaleOrRent: 2,
+        costOfSalePct: 7,
+        arv: 0,
+        grossRentMonthly: 0,
+        otherIncomeMonthly: 0,
+        vacancyPct: 5,
+        operatingExpensesMonthly: 0,
+        refinance: false,
+        permanentLtvPct: 75,
+        permanentRatePct: 6.5,
+        permanentTermYears: 30,
+      },
+      costItems: templateCostItems(
+        isLand ? "new_build" : "rehab",
+        isLand ? "commercial" : "residential",
+      ),
+    });
+    saveDeal(deal);
+    router.push(`/deals/${deal.id}`);
   }
 
-  function toggleKind(kind: OpportunityKind) {
-    setKinds((prev) =>
-      prev.includes(kind)
-        ? prev.filter((k) => k !== kind)
-        : [...prev, kind],
+  function addLeadAsListing() {
+    if (!(lead.price > 0) || !lead.county.trim()) return;
+    if (lead.type === "home" && !(Number(lead.buildingSf) > 0)) return;
+    if (lead.type === "land" && !(Number(lead.acres) > 0)) return;
+
+    const id = `user_${Date.now().toString(36)}`;
+    const anchor =
+      allListings.find(
+        (l) => l.county.toLowerCase() === lead.county.toLowerCase(),
+      ) ??
+      allListings[0] ?? {
+        lat: 29.76,
+        lng: -95.37,
+      };
+
+    const listing: Listing = {
+      id,
+      type: lead.type,
+      title: lead.address.trim() || `Lead · ${lead.city || lead.county}`,
+      address: lead.address.trim() || "Address TBD",
+      city: lead.city.trim() || lead.county,
+      county: lead.county.trim(),
+      state: lead.state.trim() || "TX",
+      zip: "",
+      price: lead.price,
+      priceLabel: "User entered",
+      priceMethod: "User-entered ask or offer (not CAD)",
+      buildingSf: lead.type === "home" ? Number(lead.buildingSf) : undefined,
+      buildingSfSource: lead.type === "home" ? "user" : undefined,
+      acres: lead.type === "land" ? Number(lead.acres) : undefined,
+      lat: anchor.lat + (Math.random() - 0.5) * 0.04,
+      lng: anchor.lng + (Math.random() - 0.5) * 0.04,
+      notes: "User-entered lead",
+      source: "user",
+      provider: "user",
+    };
+    setUserListings((prev) => [listing, ...prev]);
+    setSelectedId(id);
+    setLead(emptyLead());
+  }
+
+  function updateComp(
+    county: string,
+    field: "medianHomePsf" | "avgLandPerAcre",
+    value: number,
+  ) {
+    setComps((prev) =>
+      prev.map((c) =>
+        c.county === county ? { ...c, [field]: value } : c,
+      ),
     );
   }
 
-  function startPlanning(result: OffMarketResult) {
-    if (starting) return;
-    setStarting(true);
-    const pending: PendingDeal = {
-      lead: result.lead,
-      productType,
-      productLabel: result.productLabel,
-      marginPct: result.marginPct,
-      thesis: result.thesis,
-      kindLabel: result.kindLabel,
-      salePsf: result.salePsf,
-      allInBuildPsf: result.allInBuildPsf,
-      targetMarginPct: targetMargin,
-    };
-    savePendingDeal(pending);
-    router.push("/workspace/from-deal");
-  }
-
-  const houSignals = signals.filter((s) =>
-    /Houston/i.test(s.placeName),
-  );
-  const signalLine =
-    houSignals[0]?.yoyPct != null
-      ? `Houston prices ${houSignals[0].yoyPct > 0 ? "+" : ""}${houSignals[0].yoyPct}% YoY (FHFA)`
-      : null;
+  const zhviLabel = formatZhviAsOf(compsMeta.asOf);
+  const typicalSf = compsMeta.typicalHomeSf ?? 1900;
 
   return (
-    <div className="space-y-6">
-      {/* Mode + quiet status */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              { id: "offmarket" as const, label: "Off-market deals" },
-              { id: "submarkets" as const, label: "Submarkets" },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setView(tab.id)}
-              className={`px-4 py-2 text-sm transition ${
-                view === tab.id
-                  ? "bg-ink text-paper"
-                  : "border border-line text-steel hover:border-ink"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+    <div className="relative mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
+      <div className="flex flex-wrap items-end justify-between gap-6">
+        <div>
+          <p className="page-label">Screening</p>
+          <h1 className="page-title mt-2 text-4xl sm:text-5xl">Find deals</h1>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted">
+            Screen Houston-area homes and vacant land against public area
+            averages from Zillow Research ZHVI and county assessor GIS. Paste
+            your own lead anytime — not live MLS.
+          </p>
         </div>
-        <p className="text-xs text-steel">
-          {signalLine && <span className="text-ink">{signalLine}</span>}
-          {signalLine && " · "}
-          {sourceLabel(dataSource)}
+        <Link href="/deals" className="btn-ghost">
+          My deals
+        </Link>
+      </div>
+
+      <div className="mt-8 border border-line bg-surface px-5 py-4 sm:px-6">
+        <div className="flex flex-wrap gap-2">
+          <span className="inline-flex items-center border border-line bg-stone/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-ink">
+            ZHVI {zhviLabel}
+            {hasLiveAreaComps() ? "" : " · fallback"}
+          </span>
+          <span className="inline-flex items-center border border-line bg-stone/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-ink">
+            CAD {cadAsOf}
+          </span>
+          <span className="inline-flex items-center border border-line bg-stone/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-ink">
+            {mode === "free-cad"
+              ? `${inventory.length} open-data parcels`
+              : `${inventory.length} demo samples`}
+          </span>
+          {compsMeta.fhfa?.yoyPct != null ? (
+            <span className="inline-flex items-center border border-line bg-stone/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-ink">
+              FHFA HPI {compsMeta.fhfa.yoyPct > 0 ? "+" : ""}
+              {compsMeta.fhfa.yoyPct}% YoY
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-3 text-xs leading-relaxed text-muted">
+          {leadsMeta.disclaimer} Home $/sf ≈ county ZHVI ÷ {typicalSf} finished
+          sf
+          {compsMeta.researchPage ? (
+            <>
+              {" "}
+              (
+              <a
+                href={compsMeta.researchPage}
+                className="font-medium text-signal hover:text-brass-deep"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Zillow Research
+              </a>
+              , as of {zhviLabel})
+            </>
+          ) : null}
+          . Refresh offline:{" "}
+          <code className="text-[11px] text-ink">npm run data:pull</code>
         </p>
       </div>
 
-      {/* One control strip — Houston only */}
-      <div className="border border-line bg-limestone p-4 sm:p-5">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
-          <div className="block">
-            <span className="text-xs font-medium text-steel">Market</span>
-            <div className="mt-1.5 flex h-[42px] items-center border border-line bg-paper px-3 text-sm text-ink">
-              Houston
-            </div>
-          </div>
-
-          <label className="block sm:col-span-1 lg:col-span-1">
-            <span className="text-xs font-medium text-steel">
-              Build product
-            </span>
+      <div className="mt-6 border border-line bg-surface p-5 sm:p-6">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+          Filters
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="Type">
             <select
-              value={productType}
-              onChange={(e) => setProductType(e.target.value as ProductType)}
-              className="mt-1.5 w-full border border-line bg-paper px-3 py-2.5 text-sm outline-none"
+              className={inputClass}
+              value={typeFilter}
+              onChange={(e) =>
+                setTypeFilter(e.target.value as "all" | "home" | "land")
+              }
             >
-              <optgroup label="Residential">
-                {grouped.residential.map((p) => (
-                  <option key={p.productType} value={p.productType}>
-                    {PRODUCT_META[p.productType].label}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Multifamily">
-                {grouped.multifamily.map((p) => (
-                  <option key={p.productType} value={p.productType}>
-                    {PRODUCT_META[p.productType].label}
-                  </option>
-                ))}
-              </optgroup>
+              <option value="all">All</option>
+              <option value="home">Improved homes</option>
+              <option value="land">Land / vacant</option>
             </select>
-          </label>
-
-          <label className="block">
-            <span className="flex justify-between text-xs font-medium text-steel">
-              <span>Min. margin</span>
-              <span className="font-mono text-ink">{targetMargin}%</span>
-            </span>
-            <input
-              type="range"
-              min={8}
-              max={30}
-              step={1}
-              value={targetMargin}
-              onChange={(e) => setTargetMargin(Number(e.target.value))}
-              className="mt-3 w-full accent-copper"
-            />
-          </label>
-
-          <div className="flex flex-col justify-end gap-2">
-            <label className="flex items-center gap-2 text-sm text-ink">
+          </Field>
+          <Field label="Max assessor value" hint="0 = no max">
+            <MoneyInput value={maxPrice} onChange={setMaxPrice} />
+          </Field>
+          <Field label="County">
+            <select
+              className={inputClass}
+              value={countyFilter}
+              onChange={(e) => setCountyFilter(e.target.value)}
+            >
+              <option value="">All counties</option>
+              {counties.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Hurdle">
+            <label className="mt-1 flex cursor-pointer items-center gap-3 rounded border border-line bg-stone/40 px-3 py-3">
               <input
                 type="checkbox"
-                checked={onlyPasses}
-                onChange={(e) => setOnlyPasses(e.target.checked)}
-                className="accent-copper"
+                className="size-4 accent-[var(--signal)]"
+                checked={mustPass}
+                onChange={(e) => setMustPass(e.target.checked)}
               />
-              Passing only
-            </label>
-            {view === "offmarket" && (
-              <label className="flex items-center gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  checked={motivatedOnly}
-                  onChange={(e) => setMotivatedOnly(e.target.checked)}
-                  className="accent-copper"
-                />
-                Motivated owners
-              </label>
-            )}
-          </div>
-        </div>
-
-        {view === "offmarket" && (
-          <div className="mt-4 flex flex-wrap gap-2 border-t border-line/80 pt-4">
-            {KIND_OPTIONS.map((opt) => {
-              const on = kinds.includes(opt.id);
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => toggleKind(opt.id)}
-                  className={`px-3 py-1.5 text-sm transition ${
-                    on
-                      ? "bg-forest text-paper"
-                      : "border border-line bg-paper text-steel hover:border-ink"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-steel">
-            Build cost ~{money(defaultHard)}/sf
-            {hardCostOverride != null ? ` · using ${money(hardCostOverride)}/sf` : ""}
-            {showAdvanced && maxMiles < 100
-              ? ` · within ${maxMiles} mi`
-              : ""}
-          </p>
-          <button
-            type="button"
-            onClick={() => setShowAdvanced((v) => !v)}
-            className="text-xs font-medium text-copper hover:text-copper-deep"
-          >
-            {showAdvanced ? "Hide options" : "More options"}
-          </button>
-        </div>
-
-        {showAdvanced && (
-          <div className="mt-3 grid gap-4 border-t border-line pt-4 sm:grid-cols-2">
-            <label className="block">
-              <span className="flex justify-between text-xs font-medium text-steel">
-                <span>Search radius</span>
-                <span className="font-mono text-ink">{maxMiles} mi</span>
-              </span>
-              <input
-                type="range"
-                min={15}
-                max={100}
-                step={5}
-                value={maxMiles}
-                onChange={(e) => setMaxMiles(Number(e.target.value))}
-                className="mt-3 w-full accent-copper"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-medium text-steel">
-                Hard cost $/sf (optional)
-              </span>
-              <input
-                type="number"
-                min={50}
-                max={500}
-                placeholder={String(defaultHard)}
-                value={hardOverride}
-                onChange={(e) => setHardOverride(e.target.value)}
-                className="mt-1.5 w-full border border-line bg-paper px-3 py-2 text-sm"
-              />
-            </label>
-          </div>
-        )}
-      </div>
-
-      {view === "offmarket" && selectedLead && (
-        <div className="border border-ink bg-paper p-5 sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-sage">
-                Selected deal
-              </p>
-              <h2 className="mt-1 font-display text-2xl text-ink">
-                {selectedLead.lead.address}
-              </h2>
-              <p className="mt-1 text-sm text-steel">
-                {selectedLead.lead.city} · {selectedLead.kindLabel} · APN{" "}
-                {selectedLead.lead.apn} ·{" "}
-                <span
-                  className={
-                    selectedLead.passes ? "text-canopy" : "text-copper-deep"
-                  }
-                >
-                  {selectedLead.passes ? "Clears hurdle" : "Watch list"}
+              <span className="text-sm text-ink">
+                Must pass deal hurdle
+                <span className="mt-0.5 block text-xs text-muted">
+                  Homes ≤ {Math.round(HOME_DEAL_THRESHOLD * 100)}% of area
+                  $/sf · land &lt; area $/ac
                 </span>
+              </span>
+            </label>
+          </Field>
+        </div>
+      </div>
+
+      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_minmax(280px,360px)]">
+        <div>
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="font-display text-2xl tracking-tight text-ink">
+              Ranked leads
+            </h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+              {ranked.length} shown
+            </p>
+          </div>
+
+          {ranked.length === 0 ? (
+            <div className="mt-4 border border-dashed border-line bg-stone/40 px-5 py-14 text-center">
+              <p className="font-display text-xl text-ink">No matches</p>
+              <p className="mt-2 text-sm text-muted">
+                Relax filters or paste a custom lead below.
               </p>
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-steel">
-                {selectedLead.thesis}
-              </p>
-              <ol className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-xs text-steel">
-                <li>
-                  <span className="font-mono text-copper">01</span> Site
-                  screening
-                </li>
-                <li>
-                  <span className="font-mono text-copper">02</span> Cost &amp;
-                  underwriting
-                </li>
-                <li>
-                  <span className="font-mono text-copper">03</span> Program /
-                  design
-                </li>
-                <li>
-                  <span className="font-mono text-copper">04</span> Docs &amp;
-                  schedule
-                </li>
-              </ol>
             </div>
-            <button
-              type="button"
-              disabled={starting}
-              onClick={() => startPlanning(selectedLead)}
-              className="shrink-0 bg-ink px-5 py-3 text-sm font-medium text-paper transition hover:bg-forest disabled:opacity-60"
-            >
-              {starting ? "Starting…" : "Start planning →"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="overflow-hidden border border-line lg:grid lg:h-[min(72vh,760px)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
-        <div className="max-h-[50vh] overflow-y-auto border-b border-line lg:max-h-none lg:border-b-0 lg:border-r">
-          <div className="sticky top-0 z-10 border-b border-line bg-paper px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-sage">
-              {view === "offmarket" ? "Off-market list" : "Submarkets"}
-            </p>
-            <p className="mt-1 text-sm text-steel">
-              {view === "offmarket"
-                ? `${visibleLeads.length} leads · ${leadPins.length} on map`
-                : `${visibleSubs.length} areas · ${subPins.length} on map`}
-            </p>
-          </div>
-
-          {view === "offmarket" && (
-            <ul className="divide-y divide-line">
-              {kinds.length === 0 && (
-                <li className="px-4 py-10 text-center text-sm text-steel">
-                  Select at least one opportunity type.
-                </li>
-              )}
-              {kinds.length > 0 && visibleLeads.length === 0 && (
-                <li className="px-4 py-10 text-center text-sm text-steel">
-                  No leads clear this hurdle. Uncheck “only clear hurdle” to see
-                  watch list.
-                </li>
-              )}
-              {visibleLeads.map((r, i) => (
-                <LeadListItem
-                  key={r.lead.id}
-                  result={r}
-                  index={i}
-                  selected={selectedId === r.lead.id}
-                  onSelect={() => selectId(r.lead.id)}
-                  onStart={() => startPlanning(r)}
-                  itemRef={(el) => {
-                    listItemRefs.current[r.lead.id] = el;
-                  }}
-                />
-              ))}
+          ) : (
+            <ul className="mt-4 divide-y divide-line border border-line bg-surface">
+              {ranked.map((l) => {
+                const active = selected?.id === l.id;
+                const unit =
+                  l.type === "home"
+                    ? formatUnitPrice(l.score.listUnitPrice, "sf")
+                    : formatUnitPrice(l.score.listUnitPrice, "acre");
+                return (
+                  <li key={l.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(l.id)}
+                      className={`w-full px-4 py-4 text-left transition sm:px-5 ${
+                        active
+                          ? "bg-forest text-paper"
+                          : "hover:bg-stone/50"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p
+                            className={`font-display text-lg tracking-tight sm:text-xl ${
+                              active ? "text-paper" : "text-ink"
+                            }`}
+                          >
+                            {l.title}
+                          </p>
+                          <p
+                            className={`mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${
+                              active ? "text-sand/80" : "text-muted"
+                            }`}
+                          >
+                            {l.type === "home" ? "Home" : "Land"} · {l.city},{" "}
+                            {l.county} County · {money(l.price)}
+                            {l.priceLabel ? ` · ${l.priceLabel}` : ""}
+                            {" · "}
+                            {sourceBadge(l)}
+                          </p>
+                        </div>
+                        <span
+                          className={`shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                            l.score.isGoodDeal
+                              ? active
+                                ? "text-brass"
+                                : "text-profit"
+                              : active
+                                ? "text-sand/70"
+                                : "text-muted"
+                          }`}
+                        >
+                          {l.score.isGoodDeal ? "Good deal" : "Below hurdle"}
+                        </span>
+                      </div>
+                      <div
+                        className={`mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm ${
+                          active ? "text-sand/90" : "text-muted"
+                        }`}
+                      >
+                        <span>{unit}</span>
+                        <span>{formatDiscount(l.score.discountVsArea)}</span>
+                        {l.score.areaUnitPrice != null ? (
+                          <span>
+                            Area{" "}
+                            {formatUnitPrice(
+                              l.score.areaUnitPrice,
+                              l.type === "home" ? "sf" : "acre",
+                            )}
+                          </span>
+                        ) : null}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
+        </div>
 
-          {view === "submarkets" && (
-            <ul className="divide-y divide-line">
-              {visibleSubs.length === 0 && (
-                <li className="px-4 py-10 text-center text-sm text-steel">
-                  No submarkets clear this hurdle.
-                </li>
-              )}
-              {visibleSubs.map((r, i) => (
-                <SubListItem
-                  key={r.submarket.id}
-                  result={r}
-                  index={i}
-                  selected={selectedId === r.submarket.id}
-                  anchor={meta.anchor}
-                  onSelect={() => selectId(r.submarket.id)}
-                  itemRef={(el) => {
-                    listItemRefs.current[r.submarket.id] = el;
-                  }}
+        <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+          {selected ? (
+            <div className="border border-line bg-surface">
+              <div className="border-b border-line px-4 py-4">
+                <p className="page-label">Selected</p>
+                <h3 className="mt-1 font-display text-xl tracking-tight text-ink">
+                  {selected.title}
+                </h3>
+                <p className="mt-1 text-sm text-muted">
+                  {selected.address}
+                  <br />
+                  {selected.city}, {selected.state} {selected.zip}
+                  <br />
+                  {selected.county} County
+                  {selected.apn ? (
+                    <>
+                      <br />
+                      APN {selected.apn}
+                    </>
+                  ) : null}
+                </p>
+                <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-signal">
+                  {sourceBadge(selected)}
+                  {selected.sourceAsOf ? ` · as of ${selected.sourceAsOf}` : ""}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-px bg-line">
+                <div className="bg-stone/50 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                    {selected.priceLabel || "Value"} unit
+                  </p>
+                  <p className="mt-1 font-display text-lg text-ink">
+                    {formatUnitPrice(
+                      selected.score.listUnitPrice,
+                      selected.type === "home" ? "sf" : "acre",
+                    )}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-muted">
+                    {money(selected.price)}
+                    {selected.priceLabel ? ` · ${selected.priceLabel}` : ""}
+                  </p>
+                </div>
+                <div className="bg-stone/50 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                    Margin vs area
+                  </p>
+                  <p
+                    className={`mt-1 font-display text-lg ${
+                      selected.score.isGoodDeal ? "text-profit" : "text-ink"
+                    }`}
+                  >
+                    {formatDiscount(selected.score.discountVsArea)}
+                  </p>
+                </div>
+              </div>
+
+              <p className="border-b border-line px-4 py-3 text-xs leading-relaxed text-muted">
+                {selected.score.reason}
+                {selected.type === "home" && selected.buildingSf
+                  ? ` · ${selected.buildingSf.toLocaleString()} sf${
+                      selected.buildingSfSource === "typical-proxy"
+                        ? " (typical proxy)"
+                        : ""
+                    }`
+                  : null}
+                {selected.type === "land" && selected.acres
+                  ? ` · ${selected.acres} ac`
+                  : null}
+                {selected.priceMethod ? (
+                  <>
+                    <br />
+                    <span className="mt-1 inline-block">
+                      Method: {selected.priceMethod}
+                    </span>
+                  </>
+                ) : null}
+                {selected.buildingSfNote ? (
+                  <>
+                    <br />
+                    {selected.buildingSfNote}
+                  </>
+                ) : null}
+              </p>
+
+              <div className="relative aspect-[4/3] w-full bg-stone">
+                <iframe
+                  title={`Map of ${selected.title}`}
+                  className="absolute inset-0 h-full w-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={osmEmbedUrl(selected.lat, selected.lng)}
                 />
-              ))}
-            </ul>
-          )}
-        </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-2 text-[11px] text-muted">
+                <span>
+                  {selected.lat.toFixed(4)}, {selected.lng.toFixed(4)}
+                </span>
+                <a
+                  href={osmBrowseUrl(selected.lat, selected.lng)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-signal hover:text-brass-deep"
+                >
+                  Open map →
+                </a>
+              </div>
 
-        <div className="relative h-[42vh] min-h-[320px] lg:h-full">
-          <DealMap
-            marketId={marketId}
-            pins={activePins}
-            selectedId={selectedId}
-            onSelect={selectId}
-          />
-        </div>
+              <div className="border-t border-line p-4">
+                <button
+                  type="button"
+                  className="btn-signal w-full py-3"
+                  onClick={() => startDealFromListing(selected)}
+                >
+                  Start deal from lead
+                </button>
+                <p className="mt-2 text-center text-[11px] text-muted">
+                  Screening only — confirm list price with a realtor.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="border border-dashed border-line bg-stone/40 px-4 py-10 text-center text-sm text-muted">
+              Select a lead to see location and scores.
+            </div>
+          )}
+
+          {ranked.length > 0 ? (
+            <div className="border border-line bg-surface px-4 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                Pins
+              </p>
+              <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto text-sm">
+                {ranked.slice(0, 12).map((l) => (
+                  <li key={`pin-${l.id}`}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(l.id)}
+                      className="w-full text-left text-muted transition hover:text-signal"
+                    >
+                      <span className="text-signal">◆</span> {l.city}{" "}
+                      <span className="text-xs">
+                        ({l.lat.toFixed(2)}, {l.lng.toFixed(2)})
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </aside>
       </div>
-    </div>
-  );
-}
 
-function LeadListItem({
-  result: r,
-  index,
-  selected,
-  onSelect,
-  onStart,
-  itemRef,
-}: {
-  result: OffMarketResult;
-  index: number;
-  selected: boolean;
-  onSelect: () => void;
-  onStart: () => void;
-  itemRef: (el: HTMLLIElement | null) => void;
-}) {
-  return (
-    <li
-      ref={itemRef}
-      className={`px-4 py-4 transition ${
-        selected ? "bg-limestone" : "hover:bg-limestone/50"
-      }`}
-    >
-      <div
-        className="flex cursor-pointer gap-3"
-        onClick={onSelect}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") onSelect();
-        }}
-        role="button"
-        tabIndex={0}
-      >
-        <span className="font-mono text-sm text-copper">
-          {String(index + 1).padStart(2, "0")}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-2">
-            <h3 className="font-display text-lg text-ink">{r.lead.address}</h3>
-            <span
-              className={`px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
-                r.passes
-                  ? "bg-sage/20 text-canopy"
-                  : "bg-copper/15 text-copper-deep"
+      <section className="mt-14 border border-line bg-surface">
+        <div className="border-b border-line px-5 py-5 sm:px-6">
+          <p className="page-label">Custom lead</p>
+          <h2 className="mt-2 font-display text-2xl tracking-tight text-ink sm:text-3xl">
+            Score a paste-in
+          </h2>
+          <p className="mt-2 max-w-xl text-sm text-muted">
+            Enter a list price or offer yourself — useful when CAD is only a
+            proxy or you have a real ask.
+          </p>
+        </div>
+
+        <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-3">
+          <Field label="Type">
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ["home", "Home"],
+                  ["land", "Land"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  data-active={lead.type === id}
+                  onClick={() => setLead((p) => ({ ...p, type: id }))}
+                  className="select-tile px-3 py-2.5 text-sm font-medium"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </Field>
+          <Field label="Address">
+            <input
+              className={inputClass}
+              value={lead.address}
+              onChange={(e) =>
+                setLead((p) => ({ ...p, address: e.target.value }))
+              }
+              placeholder="Street or parcel note"
+            />
+          </Field>
+          <Field label="City">
+            <input
+              className={inputClass}
+              value={lead.city}
+              onChange={(e) =>
+                setLead((p) => ({ ...p, city: e.target.value }))
+              }
+            />
+          </Field>
+          <Field label="County">
+            <select
+              className={inputClass}
+              value={lead.county}
+              onChange={(e) =>
+                setLead((p) => ({ ...p, county: e.target.value }))
+              }
+            >
+              {AREA_COMPS.map((c) => (
+                <option key={c.county} value={c.county}>
+                  {c.county}, {c.state}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="List / offer price">
+            <MoneyInput
+              value={lead.price}
+              onChange={(n) => setLead((p) => ({ ...p, price: n }))}
+            />
+          </Field>
+          {lead.type === "home" ? (
+            <Field label="Building sqft">
+              <NumberInput
+                value={lead.buildingSf}
+                onChange={(n) => setLead((p) => ({ ...p, buildingSf: n }))}
+                min={1}
+                step={10}
+              />
+            </Field>
+          ) : (
+            <Field label="Acres">
+              <NumberInput
+                value={lead.acres}
+                onChange={(n) => setLead((p) => ({ ...p, acres: n }))}
+                min={0.01}
+                step={0.1}
+              />
+            </Field>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line bg-stone/40 px-5 py-4 sm:px-6">
+          <div>
+            <p
+              className={`text-sm font-semibold ${
+                leadScore.isGoodDeal ? "text-profit" : "text-ink"
               }`}
             >
-              {r.passes ? "Deal" : "Watch"}
-            </span>
+              {leadScore.isGoodDeal ? "Passes hurdle" : "Does not pass"}
+              {" · "}
+              {formatUnitPrice(
+                leadScore.listUnitPrice,
+                lead.type === "home" ? "sf" : "acre",
+              )}
+              {" · "}
+              {formatDiscount(leadScore.discountVsArea)}
+            </p>
+            <p className="mt-0.5 text-xs text-muted">{leadScore.reason}</p>
           </div>
-          <p className="mt-1 text-xs text-steel">
-            {r.lead.city} · {r.kindLabel} · {money(r.lead.askingOrAssessed)} ·{" "}
-            {(r.marginPct * 100).toFixed(0)}% margin
-          </p>
-          <p className="mt-2 line-clamp-2 text-sm text-steel">{r.thesis}</p>
-          {selected && (
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onStart();
+              className="btn-ghost"
+              onClick={addLeadAsListing}
+            >
+              Add to list
+            </button>
+            <button
+              type="button"
+              className="btn-signal"
+              onClick={() => {
+                if (!(lead.price > 0)) return;
+                const listing: Listing = {
+                  id: "scratch",
+                  type: lead.type,
+                  title: lead.address || "Custom lead",
+                  address: lead.address || "Address TBD",
+                  city: lead.city || lead.county,
+                  county: lead.county,
+                  state: lead.state,
+                  zip: "",
+                  price: lead.price,
+                  priceLabel: "User entered",
+                  priceMethod: "User-entered ask or offer",
+                  buildingSf: lead.buildingSf ?? undefined,
+                  buildingSfSource: "user",
+                  acres: lead.acres ?? undefined,
+                  lat: 29.76,
+                  lng: -95.37,
+                  source: "user",
+                  provider: "user",
+                };
+                startDealFromListing(listing);
               }}
-              className="mt-3 text-sm font-medium text-copper hover:text-copper-deep"
             >
-              Start planning with this deal →
+              Start deal from lead
             </button>
-          )}
-        </div>
-      </div>
-    </li>
-  );
-}
-
-function SubListItem({
-  result: r,
-  index,
-  selected,
-  anchor,
-  onSelect,
-  itemRef,
-}: {
-  result: DealResult;
-  index: number;
-  selected: boolean;
-  anchor: string;
-  onSelect: () => void;
-  itemRef: (el: HTMLLIElement | null) => void;
-}) {
-  return (
-    <li
-      ref={itemRef}
-      className={`cursor-pointer px-4 py-4 transition ${
-        selected ? "bg-limestone" : "hover:bg-limestone/50"
-      }`}
-      onClick={onSelect}
-    >
-      <div className="flex gap-3">
-        <span className="font-mono text-sm text-copper">
-          {String(index + 1).padStart(2, "0")}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-2">
-            <h3 className="font-display text-lg text-ink">
-              {r.submarket.name}
-            </h3>
-            <span
-              className={`px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
-                r.passes
-                  ? "bg-sage/20 text-canopy"
-                  : "bg-copper/15 text-copper-deep"
-              }`}
-            >
-              {r.passes ? "Pass" : "Thin"}
-            </span>
           </div>
-          <p className="mt-1 text-xs text-steel">
-            {Math.round(r.submarket.milesFromAnchor)} mi from {anchor} ·{" "}
-            {money(r.salePsf)}/sf · {(r.marginPct * 100).toFixed(0)}% margin
-          </p>
         </div>
-      </div>
-    </li>
+      </section>
+
+      <section className="mt-10">
+        <button
+          type="button"
+          onClick={() => setShowComps((v) => !v)}
+          className="flex w-full items-center justify-between border border-line bg-surface px-5 py-4 text-left transition hover:bg-stone/40 sm:px-6"
+        >
+          <div>
+            <p className="page-label">Benchmarks</p>
+            <p className="mt-1 font-display text-xl tracking-tight text-ink">
+              County market averages
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              ZHVI-derived homes $/sf ({zhviLabel}) · land $/acre from CAD
+              sample or metro proxy — editable for local judgment
+            </p>
+          </div>
+          <span className="text-sm font-semibold text-signal">
+            {showComps ? "Hide" : "Edit"}
+          </span>
+        </button>
+        {showComps ? (
+          <div className="border border-t-0 border-line bg-surface overflow-x-auto">
+            <table className="w-full min-w-[520px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-line text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                  <th className="px-4 py-3">County</th>
+                  <th className="px-4 py-3">Median home $/sf</th>
+                  <th className="px-4 py-3">Avg land $/acre</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comps.map((c) => (
+                  <tr key={c.county} className="border-b border-line/80">
+                    <td className="px-4 py-2.5 font-medium text-ink">
+                      {c.county}, {c.state}
+                      {c.zhvi ? (
+                        <span className="mt-0.5 block text-[11px] font-normal text-muted">
+                          ZHVI {money(c.zhvi)}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        type="number"
+                        min={1}
+                        className={`${inputClass} max-w-[8rem]`}
+                        value={c.medianHomePsf}
+                        onChange={(e) =>
+                          updateComp(
+                            c.county,
+                            "medianHomePsf",
+                            Number(e.target.value) || 0,
+                          )
+                        }
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        type="number"
+                        min={1}
+                        step={1000}
+                        className={`${inputClass} max-w-[10rem]`}
+                        value={c.avgLandPerAcre}
+                        onChange={(e) =>
+                          updateComp(
+                            c.county,
+                            "avgLandPerAcre",
+                            Number(e.target.value) || 0,
+                          )
+                        }
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="px-4 py-3 text-xs text-muted">
+              {compsMeta.method ?? "County ZHVI-derived $/sf."}{" "}
+              {compsMeta.landMethod ?? ""} Screening only — not an appraisal.
+              Re-pull snapshot offline:{" "}
+              <code className="text-ink">npm run data:pull</code> (no runtime
+              scrape).
+            </p>
+          </div>
+        ) : null}
+      </section>
+    </div>
   );
 }

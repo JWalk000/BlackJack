@@ -1,0 +1,787 @@
+"use client";
+
+import { useMemo } from "react";
+import type { BuildMode, Deal, PropertyClass } from "@/lib/types";
+import { DEFAULT_PROPERTY_TYPES } from "@/lib/types";
+import { costsAreBlank, templateCostItems } from "@/lib/deals";
+import { money, pct, underwrite } from "@/lib/underwriting";
+import { CostItemizer } from "./CostItemizer";
+import {
+  Field,
+  MoneyInput,
+  NumberInput,
+  Metric,
+  inputClass,
+} from "./ui";
+
+type Tab = "property" | "costs" | "analysis";
+
+export function DealWorkspace({
+  deal,
+  onChange,
+  onSave,
+  tab,
+  onTab,
+  savedFlash,
+}: {
+  deal: Deal;
+  onChange: (deal: Deal) => void;
+  onSave: () => void;
+  tab: Tab;
+  onTab: (t: Tab) => void;
+  savedFlash?: boolean;
+}) {
+  const result = useMemo(() => underwrite(deal), [deal]);
+  const types = DEFAULT_PROPERTY_TYPES[deal.propertyClass];
+
+  function patchProperty(p: Partial<Deal["property"]>) {
+    onChange({ ...deal, property: { ...deal.property, ...p } });
+  }
+  function patchAssumptions(a: Partial<Deal["assumptions"]>) {
+    onChange({ ...deal, assumptions: { ...deal.assumptions, ...a } });
+  }
+  function patchFinancing(f: Partial<Deal["financing"]>) {
+    onChange({ ...deal, financing: { ...deal.financing, ...f } });
+  }
+
+  function applyScope(next: {
+    buildMode?: BuildMode;
+    propertyClass?: PropertyClass;
+  }) {
+    const buildMode = next.buildMode ?? deal.buildMode;
+    const propertyClass = next.propertyClass ?? deal.propertyClass;
+    const firstType =
+      next.propertyClass && next.propertyClass !== deal.propertyClass
+        ? DEFAULT_PROPERTY_TYPES[next.propertyClass][0]
+        : deal.property.propertyType;
+
+    const shouldResetCosts = costsAreBlank(deal.costItems);
+    onChange({
+      ...deal,
+      buildMode,
+      propertyClass,
+      property: {
+        ...deal.property,
+        propertyType: firstType,
+      },
+      costItems: shouldResetCosts
+        ? templateCostItems(buildMode, propertyClass)
+        : deal.costItems,
+    });
+  }
+
+  function resetCostTemplate() {
+    onChange({
+      ...deal,
+      costItems: templateCostItems(deal.buildMode, deal.propertyClass),
+    });
+  }
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "property", label: "Property" },
+    { id: "costs", label: "Itemized costs" },
+    { id: "analysis", label: "Final numbers" },
+  ];
+
+  return (
+    <div>
+      <div className="flex flex-col gap-5 border-b border-line pb-8 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="page-label">
+            {deal.buildMode === "new_build" ? "Ground-up" : "Rehab"}
+            {" · "}
+            {deal.propertyClass}
+          </p>
+          <h1 className="page-title mt-2 text-3xl sm:text-5xl">
+            {deal.property.name.trim() ||
+              deal.property.address.trim() ||
+              "Untitled deal"}
+          </h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {savedFlash ? (
+            <span className="text-sm font-semibold text-profit">Saved</span>
+          ) : null}
+          <button type="button" onClick={onSave} className="btn-signal">
+            Save deal
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-6 flex flex-wrap gap-1 border-b border-line">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => onTab(t.id)}
+            className={`border-b-2 px-4 py-3.5 text-sm font-medium tracking-wide transition ${
+              tab === t.id
+                ? "border-signal text-ink"
+                : "border-transparent text-muted hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-10">
+        {tab === "property" ? (
+          <div className="grid gap-10 lg:grid-cols-2">
+            <section className="panel space-y-5 p-5 sm:p-7">
+              <div>
+                <p className="page-label">Section</p>
+                <h2 className="mt-2 font-display text-2xl tracking-tight text-ink sm:text-3xl">
+                  Identity
+                </h2>
+              </div>
+              <Field label="Deal / property name">
+                <input
+                  className={inputClass}
+                  value={deal.property.name}
+                  onChange={(e) => patchProperty({ name: e.target.value })}
+                  placeholder="e.g. Heights duplex rebuild"
+                />
+              </Field>
+              <Field label="Description">
+                <textarea
+                  className={`${inputClass} min-h-24`}
+                  value={deal.property.description}
+                  onChange={(e) =>
+                    patchProperty({ description: e.target.value })
+                  }
+                />
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Build type">
+                  <select
+                    className={inputClass}
+                    value={deal.buildMode}
+                    onChange={(e) =>
+                      applyScope({
+                        buildMode: e.target.value as Deal["buildMode"],
+                      })
+                    }
+                  >
+                    <option value="rehab">Rehab / renovation</option>
+                    <option value="new_build">Ground-up build</option>
+                  </select>
+                </Field>
+                <Field label="Residential or commercial">
+                  <select
+                    className={inputClass}
+                    value={deal.propertyClass}
+                    onChange={(e) =>
+                      applyScope({
+                        propertyClass: e.target
+                          .value as Deal["propertyClass"],
+                      })
+                    }
+                  >
+                    <option value="residential">Residential</option>
+                    <option value="commercial">Commercial</option>
+                  </select>
+                </Field>
+              </div>
+              <Field label="Street address">
+                <input
+                  className={inputClass}
+                  value={deal.property.address}
+                  onChange={(e) => patchProperty({ address: e.target.value })}
+                />
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="City">
+                  <input
+                    className={inputClass}
+                    value={deal.property.city}
+                    onChange={(e) => patchProperty({ city: e.target.value })}
+                  />
+                </Field>
+                <Field label="State">
+                  <input
+                    className={inputClass}
+                    value={deal.property.state}
+                    onChange={(e) => patchProperty({ state: e.target.value })}
+                  />
+                </Field>
+                <Field label="Zip">
+                  <input
+                    className={inputClass}
+                    value={deal.property.zip}
+                    onChange={(e) => patchProperty({ zip: e.target.value })}
+                  />
+                </Field>
+              </div>
+              <Field label="APN">
+                <input
+                  className={inputClass}
+                  value={deal.property.apn}
+                  onChange={(e) => patchProperty({ apn: e.target.value })}
+                />
+              </Field>
+            </section>
+
+            <section className="panel space-y-5 p-5 sm:p-7">
+              <div>
+                <p className="page-label">Section</p>
+                <h2 className="mt-2 font-display text-2xl tracking-tight text-ink sm:text-3xl">
+                  Physical
+                </h2>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Property type">
+                  <select
+                    className={inputClass}
+                    value={deal.property.propertyType}
+                    onChange={(e) =>
+                      patchProperty({ propertyType: e.target.value })
+                    }
+                  >
+                    {types.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Condition">
+                  <input
+                    className={inputClass}
+                    value={deal.property.condition}
+                    onChange={(e) =>
+                      patchProperty({ condition: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Building sf">
+                  <NumberInput
+                    value={deal.property.buildingSf}
+                    onChange={(buildingSf) => patchProperty({ buildingSf })}
+                    min={0}
+                    step={50}
+                  />
+                </Field>
+                <Field label="Lot sf">
+                  <NumberInput
+                    value={deal.property.lotSf}
+                    onChange={(lotSf) => patchProperty({ lotSf })}
+                    min={0}
+                    step={100}
+                  />
+                </Field>
+                <Field label="Year built">
+                  <NumberInput
+                    value={deal.property.yearBuilt}
+                    onChange={(yearBuilt) => patchProperty({ yearBuilt })}
+                    min={1800}
+                    max={2100}
+                  />
+                </Field>
+                <Field label="Units">
+                  <NumberInput
+                    value={deal.property.units}
+                    onChange={(units) => patchProperty({ units })}
+                    min={0}
+                  />
+                </Field>
+                {deal.propertyClass === "residential" ? (
+                  <>
+                    <Field label="Bedrooms">
+                      <NumberInput
+                        value={deal.property.bedrooms}
+                        onChange={(bedrooms) => patchProperty({ bedrooms })}
+                        min={0}
+                      />
+                    </Field>
+                    <Field label="Full baths">
+                      <NumberInput
+                        value={deal.property.bathsFull}
+                        onChange={(bathsFull) => patchProperty({ bathsFull })}
+                        min={0}
+                        step={0.5}
+                      />
+                    </Field>
+                  </>
+                ) : (
+                  <>
+                    <Field label="Floors">
+                      <NumberInput
+                        value={deal.property.floors}
+                        onChange={(floors) => patchProperty({ floors })}
+                        min={0}
+                      />
+                    </Field>
+                    <Field label="Zoning">
+                      <input
+                        className={inputClass}
+                        value={deal.property.zoning}
+                        onChange={(e) =>
+                          patchProperty({ zoning: e.target.value })
+                        }
+                      />
+                    </Field>
+                  </>
+                )}
+              </div>
+
+              <div className="border-t border-line pt-6">
+                <p className="page-label">Records</p>
+                <h2 className="mt-2 font-display text-2xl tracking-tight text-ink">
+                  Snapshot
+                </h2>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Last sale amount">
+                  <MoneyInput
+                    value={deal.property.lastSaleAmount ?? 0}
+                    onChange={(lastSaleAmount) =>
+                      patchProperty({ lastSaleAmount })
+                    }
+                  />
+                </Field>
+                <Field label="Last sale date">
+                  <input
+                    type="date"
+                    className={inputClass}
+                    value={deal.property.lastSaleDate}
+                    onChange={(e) =>
+                      patchProperty({ lastSaleDate: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Tax assessment">
+                  <MoneyInput
+                    value={deal.property.taxAssessment ?? 0}
+                    onChange={(taxAssessment) =>
+                      patchProperty({ taxAssessment })
+                    }
+                  />
+                </Field>
+                <Field label="Annual tax">
+                  <MoneyInput
+                    value={deal.property.taxAmount ?? 0}
+                    onChange={(taxAmount) => patchProperty({ taxAmount })}
+                  />
+                </Field>
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+        {tab === "costs" ? (
+          <CostItemizer
+            items={deal.costItems}
+            onChange={(costItems) => onChange({ ...deal, costItems })}
+            onResetTemplate={resetCostTemplate}
+            propertyClass={deal.propertyClass}
+            buildMode={deal.buildMode}
+          />
+        ) : null}
+
+        {tab === "analysis" ? (
+          <div className="space-y-8">
+            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
+              <div>
+                <p className="page-label">Analysis</p>
+                <h2 className="page-title mt-2 text-3xl sm:text-4xl">
+                  Final numbers
+                </h2>
+                <p className="mt-2 max-w-xl text-sm text-muted">
+                  Purchase and financing assumptions on the left; flip or hold
+                  results on the right. Export a print-ready package for your
+                  lender.
+                </p>
+              </div>
+              <a
+                href={`/deals/${deal.id}/package`}
+                className="btn-signal"
+              >
+                Open bank package
+              </a>
+            </div>
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+            <section className="panel space-y-6 p-5 sm:p-7">
+              <div>
+                <p className="page-label">Assumptions</p>
+                <h2 className="mt-2 font-display text-2xl tracking-tight text-ink sm:text-3xl">
+                  Purchase, timeline, financing
+                </h2>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                  Purchase
+                </p>
+                <Field label="Purchase price">
+                  <MoneyInput
+                    value={deal.assumptions.purchasePrice}
+                    onChange={(purchasePrice) => {
+                      const next: Partial<typeof deal.assumptions> = {
+                        purchasePrice,
+                      };
+                      if (!deal.assumptions.closingCostsManual) {
+                        next.closingCosts = Math.round(
+                          (purchasePrice || 0) * 0.04,
+                        );
+                      }
+                      patchAssumptions(next);
+                    }}
+                  />
+                </Field>
+                <Field
+                  label="Closing costs"
+                  hint="Defaults to 4% of purchase — edit anytime"
+                >
+                  <MoneyInput
+                    value={deal.assumptions.closingCosts}
+                    onChange={(closingCosts) =>
+                      patchAssumptions({
+                        closingCosts,
+                        closingCostsManual: true,
+                      })
+                    }
+                  />
+                </Field>
+              </div>
+
+              <div className="space-y-4 border-t border-line pt-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                  Build budget roll-up
+                </p>
+                <div className="flex items-center justify-between border border-signal/25 bg-signal/10 px-4 py-3.5">
+                  <span className="text-sm text-muted">
+                    From itemized costs
+                  </span>
+                  <span className="font-display text-2xl tracking-tight text-ink">
+                    {money(result.buildBudget)}
+                  </span>
+                </div>
+                <Field
+                  label={
+                    deal.buildMode === "new_build"
+                      ? "Build period (months)"
+                      : "Rehab period (months)"
+                  }
+                >
+                  <NumberInput
+                    value={deal.assumptions.projectMonths}
+                    onChange={(v) =>
+                      patchAssumptions({ projectMonths: v ?? 1 })
+                    }
+                    min={1}
+                  />
+                </Field>
+              </div>
+
+              <div className="space-y-4 border-t border-line pt-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                  Financing
+                </p>
+                <Field label="Financing style">
+                  <select
+                    className={inputClass}
+                    value={deal.financing.style}
+                    onChange={(e) =>
+                      patchFinancing({
+                        style: e.target.value as Deal["financing"]["style"],
+                      })
+                    }
+                  >
+                    <option value="all_cash">All cash</option>
+                    <option value="hard_money">Hard money / private</option>
+                    <option value="conventional">Conventional / bank</option>
+                  </select>
+                </Field>
+                {deal.financing.style !== "all_cash" ? (
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Field label="LTV %">
+                      <NumberInput
+                        value={deal.financing.ltvPct}
+                        onChange={(v) =>
+                          patchFinancing({ ltvPct: v ?? 0 })
+                        }
+                        min={0}
+                        max={100}
+                      />
+                    </Field>
+                    <Field label="Rate %">
+                      <NumberInput
+                        value={deal.financing.interestRatePct}
+                        onChange={(v) =>
+                          patchFinancing({ interestRatePct: v ?? 0 })
+                        }
+                        min={0}
+                        step={0.125}
+                      />
+                    </Field>
+                    <Field label="Points %">
+                      <NumberInput
+                        value={deal.financing.pointsPct}
+                        onChange={(v) =>
+                          patchFinancing({ pointsPct: v ?? 0 })
+                        }
+                        min={0}
+                        step={0.25}
+                      />
+                    </Field>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="space-y-4 border-t border-line pt-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                  Exit value
+                </p>
+                <Field
+                  label={
+                    deal.exitStrategy === "flip"
+                      ? "After-repair / exit value (ARV)"
+                      : "Stabilized value (ARV)"
+                  }
+                >
+                  <MoneyInput
+                    value={deal.assumptions.arv}
+                    onChange={(arv) => patchAssumptions({ arv })}
+                  />
+                </Field>
+              </div>
+            </section>
+
+            <section className="space-y-6">
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    ["flip", "Flip / sell"],
+                    ["hold", "Hold / rent"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    data-active={deal.exitStrategy === id}
+                    onClick={() => onChange({ ...deal, exitStrategy: id })}
+                    className="select-tile px-3 py-3 text-center text-sm font-semibold"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Metric label="All-in cost" value={money(result.totalAllIn)} />
+                <Metric
+                  label="Cash required"
+                  value={money(result.cashRequired)}
+                  tone="accent"
+                />
+                <Metric
+                  label="% of ARV"
+                  value={pct(result.pctOfArv)}
+                />
+              </div>
+
+              {deal.exitStrategy === "flip" ? (
+                <div className="panel space-y-5 p-5 sm:p-7">
+                  <div>
+                    <p className="page-label">Exit path</p>
+                    <h2 className="mt-2 font-display text-2xl tracking-tight text-ink sm:text-3xl">
+                      Flip analysis
+                    </h2>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Months to sell (after work)">
+                      <NumberInput
+                        value={deal.assumptions.monthsToSaleOrRent}
+                        onChange={(v) =>
+                          patchAssumptions({
+                            monthsToSaleOrRent: v ?? 0,
+                          })
+                        }
+                        min={0}
+                      />
+                    </Field>
+                    <Field label="Cost of sale %">
+                      <NumberInput
+                        value={deal.assumptions.costOfSalePct}
+                        onChange={(v) =>
+                          patchAssumptions({ costOfSalePct: v ?? 0 })
+                        }
+                        min={0}
+                        max={20}
+                        step={0.25}
+                      />
+                    </Field>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Metric
+                      label="Cost of sale"
+                      value={money(result.costOfSale)}
+                    />
+                    <Metric
+                      label="Net sale proceeds"
+                      value={money(result.netSaleProceeds)}
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <Metric
+                      label="Projected profit"
+                      value={money(result.flipProfit)}
+                      tone={result.flipProfit >= 0 ? "profit" : "loss"}
+                    />
+                    <Metric
+                      label="ROI on cash"
+                      value={pct(result.flipRoiOnCash)}
+                      tone={result.flipRoiOnCash >= 0 ? "profit" : "loss"}
+                    />
+                    <Metric
+                      label="ROI annualized"
+                      value={pct(result.flipRoiAnnualized)}
+                      tone={
+                        result.flipRoiAnnualized >= 0 ? "profit" : "loss"
+                      }
+                    />
+                  </div>
+                  <p className="text-xs leading-relaxed text-muted">
+                    Profit = sale price − cost of sale − all-in (purchase +
+                    closing + itemized build + short-term finance cost). ROI uses
+                    cash required.
+                  </p>
+                </div>
+              ) : (
+                <div className="panel space-y-5 p-5 sm:p-7">
+                  <div>
+                    <p className="page-label">Exit path</p>
+                    <h2 className="mt-2 font-display text-2xl tracking-tight text-ink sm:text-3xl">
+                      Hold / rent analysis
+                    </h2>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Gross rent / mo">
+                      <MoneyInput
+                        value={deal.assumptions.grossRentMonthly}
+                        onChange={(grossRentMonthly) =>
+                          patchAssumptions({ grossRentMonthly })
+                        }
+                      />
+                    </Field>
+                    <Field label="Other income / mo">
+                      <MoneyInput
+                        value={deal.assumptions.otherIncomeMonthly}
+                        onChange={(otherIncomeMonthly) =>
+                          patchAssumptions({ otherIncomeMonthly })
+                        }
+                      />
+                    </Field>
+                    <Field label="Vacancy %">
+                      <NumberInput
+                        value={deal.assumptions.vacancyPct}
+                        onChange={(v) =>
+                          patchAssumptions({ vacancyPct: v ?? 0 })
+                        }
+                        min={0}
+                        max={100}
+                      />
+                    </Field>
+                    <Field label="OpEx / mo">
+                      <MoneyInput
+                        value={deal.assumptions.operatingExpensesMonthly}
+                        onChange={(operatingExpensesMonthly) =>
+                          patchAssumptions({ operatingExpensesMonthly })
+                        }
+                      />
+                    </Field>
+                  </div>
+
+                  <Field label="Refinance into permanent debt?">
+                    <select
+                      className={inputClass}
+                      value={deal.assumptions.refinance ? "yes" : "no"}
+                      onChange={(e) =>
+                        patchAssumptions({
+                          refinance: e.target.value === "yes",
+                        })
+                      }
+                    >
+                      <option value="no">No</option>
+                      <option value="yes">Yes</option>
+                    </select>
+                  </Field>
+                  {deal.assumptions.refinance ? (
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <Field label="Permanent LTV %">
+                        <NumberInput
+                          value={deal.assumptions.permanentLtvPct}
+                          onChange={(v) =>
+                            patchAssumptions({ permanentLtvPct: v ?? 0 })
+                          }
+                          min={0}
+                          max={100}
+                        />
+                      </Field>
+                      <Field label="Rate %">
+                        <NumberInput
+                          value={deal.assumptions.permanentRatePct}
+                          onChange={(v) =>
+                            patchAssumptions({ permanentRatePct: v ?? 0 })
+                          }
+                          min={0}
+                          step={0.125}
+                        />
+                      </Field>
+                      <Field label="Term (years)">
+                        <NumberInput
+                          value={deal.assumptions.permanentTermYears}
+                          onChange={(v) =>
+                            patchAssumptions({
+                              permanentTermYears: v ?? 30,
+                            })
+                          }
+                          min={1}
+                        />
+                      </Field>
+                    </div>
+                  ) : null}
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Metric
+                      label="NOI / mo"
+                      value={money(result.noiMonthly)}
+                      tone={result.noiMonthly >= 0 ? "profit" : "loss"}
+                    />
+                    <Metric
+                      label="Cash flow / mo"
+                      value={money(result.cashFlowMonthly)}
+                      tone={result.cashFlowMonthly >= 0 ? "profit" : "loss"}
+                    />
+                    <Metric
+                      label="Sweat equity"
+                      value={money(result.sweatEquity)}
+                      tone={result.sweatEquity >= 0 ? "profit" : "loss"}
+                    />
+                    <Metric
+                      label="Cash-on-cash"
+                      value={pct(result.cashOnCashAnnual)}
+                      tone={
+                        result.cashOnCashAnnual >= 0 ? "profit" : "loss"
+                      }
+                    />
+                    <Metric
+                      label="Cap rate on cost"
+                      value={pct(result.capRateOnCost)}
+                    />
+                    <Metric
+                      label="Cap rate on ARV"
+                      value={pct(result.capRateOnArv)}
+                    />
+                  </div>
+                </div>
+              )}
+            </section>
+          </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}

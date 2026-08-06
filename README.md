@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Estate
 
-## Getting Started
-
-First, run the development server:
+Build and underwrite real estate deals — ground-up or rehab, residential or commercial — with full itemized costs.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Deals save in your browser (localStorage) until a backend is added.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Find deals (public market data)
 
-## Learn More
+**Route:** `/deals/find`
 
-To learn more about Next.js, take a look at the following resources:
+Inventory and benchmarks ship as committed JSON snapshots under `src/data/generated/` (static import — no `fs` in the client). Production does not scrape at request time.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Source | Use |
+|--------|-----|
+| [Zillow Research ZHVI](https://www.zillow.com/research/data/) county CSV | Area median home $/sf ≈ ZHVI ÷ 1900 finished sf |
+| Harris CAD parcels (ArcGIS) | Residential + vacant parcel sample (assessed/market value) |
+| Fort Bend CAD parcels (ArcGIS) | Homes with living area + vacant land |
+| [FHFA HPI](https://www.fhfa.gov/data/hpi) (optional) | Houston metro trend badge only |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**CAD assessed/market value ≠ MLS list price.** UI labels price as assessor value and asks users to verify with a realtor.
 
-## Deploy on Vercel
+### Refresh data
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run data:pull
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Writes:
+
+- `src/data/generated/free-leads.json`
+- `src/data/generated/area-comps-live.json`
+- `data/cache/*` mirrors
+
+Options: `--skip-parcels`, `--skip-hpi`. Redeploy after pull to publish new snapshots.

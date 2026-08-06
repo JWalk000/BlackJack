@@ -1,185 +1,163 @@
 import Link from "next/link";
 
-const pillars = [
-  {
-    label: "01",
-    title: "Deal Finder",
-    href: "/deals",
-    copy: "Pinpoint where build cost still clears your margin for single-family, duplex–fourplex, townhomes, and multifamily in Houston.",
-    features: [
-      {
-        name: "Residential",
-        href: "/deals",
-        detail: "SF for-sale, BTR, 2–4 unit, townhome",
-      },
-      {
-        name: "Multifamily",
-        href: "/deals",
-        detail: "Garden and mid-rise apartment product",
-      },
-    ],
-  },
-  {
-    label: "02",
-    title: "Plan & Design",
-    href: "/plan",
-    copy: "Screen parcels, generate multifamily floor plates or feed SF rebuild cost, and underwrite flip/rent returns with regional construction data.",
-    features: [
-      {
-        name: "Site Screening",
-        href: "/plan/screening",
-        detail: "Property records, setbacks, zoning",
-      },
-      {
-        name: "Generative Design",
-        href: "/plan/generative",
-        detail: "Multifamily unit mix & floor plates",
-      },
-      {
-        name: "Cost Modeling",
-        href: "/plan/cost",
-        detail: "SF rehab to multifamily budgets + ROI",
-      },
-    ],
-  },
-  {
-    label: "03",
-    title: "Execution & Management",
-    href: "/execution",
-    copy: "Review purchase agreements, titles, and environmental reports. Track progress and keep schedules under control through delivery.",
-    features: [
-      {
-        name: "Document Review",
-        href: "/execution/documents",
-        detail: "Upload + AI checks on agreements & titles",
-      },
-      {
-        name: "Progress & Schedule",
-        href: "/execution/progress",
-        detail: "Tracking and schedule control",
-      },
-    ],
-  },
+const HERO_IMG =
+  "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=2400&q=80";
+
+const YARD_IMG =
+  "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1800&q=80";
+
+const MARQUEE = [
+  "Ground-up",
+  "Rehab",
+  "Residential",
+  "Commercial",
+  "Itemized costs",
+  "Flip math",
+  "Hold & rent",
+  "Line by line",
 ];
 
 export default function HomePage() {
   return (
     <>
-      <section className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-ink text-paper">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage:
-              "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=2400&q=80')",
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/88 to-ink/45" />
-        <div className="absolute inset-0 hero-grid opacity-40" />
-        <div className="absolute inset-0 texture-grain opacity-50" />
+      {/* Full-bleed hero · one composition */}
+      <section className="relative min-h-[100svh] overflow-hidden bg-ink text-paper">
+        <div className="absolute inset-0 overflow-hidden">
+          <div
+            className="animate-ken absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url('${HERO_IMG}')` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/70 to-ink/35" />
+          <div className="absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/50 to-transparent" />
+          <div className="texture-grain absolute inset-0 opacity-40" />
+        </div>
 
-        <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col justify-end px-5 pb-16 pt-28 sm:px-8 sm:pb-20 lg:justify-center lg:pb-0">
-          <p className="animate-rise font-display text-5xl tracking-tight sm:text-7xl lg:text-8xl">
+        <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-5 pb-28 pt-28 sm:px-8 sm:pb-32 lg:justify-center lg:pb-24">
+          <p className="animate-rise text-[11px] font-medium uppercase tracking-[0.32em] text-signal">
+            Build the deal file
+          </p>
+
+          <h1 className="animate-rise-1 mt-3 font-display text-[clamp(4.5rem,18vw,10rem)] leading-[0.88] tracking-tight text-paper">
             Estate
-          </p>
-          <p className="animate-rise-delay-1 mt-3 text-[11px] font-medium uppercase tracking-[0.28em] text-sage">
-            Residential · Multifamily
-          </p>
-          <div className="animate-draw mt-5 h-px w-24 bg-copper" />
-          <h1 className="animate-rise-delay-1 mt-8 max-w-xl font-display text-2xl leading-snug text-limestone sm:text-3xl lg:text-4xl">
-            Find the deal. Plan the home or apartments. Deliver on schedule.
           </h1>
-          <p className="animate-rise-delay-2 mt-5 max-w-md text-base leading-relaxed text-mist sm:text-lg">
-            Built for single-family, small multi, and apartment products —
-            off-market land, rebuilds, and multifamily programs in Houston.
+
+          <div className="animate-draw mt-5 h-1 w-28 origin-left bg-signal sm:w-36" />
+
+          <p className="animate-rise-2 mt-7 max-w-md text-lg leading-relaxed text-sand sm:text-xl">
+            Ground-up or rehab. Residential or commercial. Every cost broken
+            down — then the returns pop.
           </p>
-          <div className="animate-rise-delay-3 mt-10 flex flex-wrap gap-3">
+
+          <div className="animate-rise-3 mt-10 flex flex-wrap items-center gap-3">
             <Link
-              href="/deals"
-              className="bg-copper px-6 py-3 text-sm font-medium text-paper transition hover:bg-copper-deep"
+              href="/deals/new"
+              className="bg-signal px-7 py-3.5 text-sm font-semibold tracking-wide text-paper transition hover:bg-brass hover:text-ink"
             >
-              Open Deal Finder
+              Start a deal
             </Link>
             <Link
-              href="/workspace"
-              className="border border-paper/30 px-6 py-3 text-sm font-medium text-paper transition hover:border-paper hover:bg-paper/5"
+              href="/deals"
+              className="border border-paper/40 px-7 py-3.5 text-sm font-medium text-paper transition hover:border-paper hover:bg-paper/10"
             >
               Open workspace
             </Link>
           </div>
         </div>
-      </section>
 
-      <section className="border-b border-line bg-paper">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-sage">
-            From deal to delivery
-          </p>
-          <h2 className="mt-4 max-w-2xl font-display text-3xl tracking-tight text-ink sm:text-4xl">
-            Find margin first. Then plan and execute.
-          </h2>
-
-          <div className="mt-14 grid gap-12 lg:grid-cols-3 lg:gap-10">
-            {pillars.map((pillar) => (
-              <article key={pillar.title} className="group">
-                <div className="flex items-baseline gap-4">
-                  <span className="font-mono text-sm text-copper">
-                    {pillar.label}
+        {/* Flavor strip */}
+        <div className="absolute inset-x-0 bottom-0 border-t border-white/10 bg-ink/70 py-3 backdrop-blur-sm">
+          <div className="overflow-hidden">
+            <div className="animate-marquee flex w-max gap-10 whitespace-nowrap px-4 text-[11px] font-medium uppercase tracking-[0.28em] text-sand/80">
+              {[...MARQUEE, ...MARQUEE].map((item, i) => (
+                <span key={`${item}-${i}`} className="flex items-center gap-10">
+                  {item}
+                  <span className="text-signal" aria-hidden>
+                    ◆
                   </span>
-                  <Link
-                    href={pillar.href}
-                    className="font-display text-2xl text-ink transition group-hover:text-forest sm:text-3xl"
-                  >
-                    {pillar.title}
-                  </Link>
-                </div>
-                <p className="mt-4 text-base leading-relaxed text-steel">
-                  {pillar.copy}
-                </p>
-                <ul className="mt-8 space-y-0 border-t border-line">
-                  {pillar.features.map((feature) => (
-                    <li key={feature.href} className="border-b border-line">
-                      <Link
-                        href={feature.href}
-                        className="flex items-baseline justify-between gap-4 py-4 transition hover:pl-2"
-                      >
-                        <span>
-                          <span className="block font-medium text-ink">
-                            {feature.name}
-                          </span>
-                          <span className="mt-1 block text-sm text-steel">
-                            {feature.detail}
-                          </span>
-                        </span>
-                        <span className="text-copper" aria-hidden>
-                          →
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            ))}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="bg-forest text-paper">
-        <div className="mx-auto flex max-w-6xl flex-col items-start gap-8 px-5 py-20 sm:px-8 sm:py-24 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-xl">
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-sage">
-              Your projects, one workspace
-            </p>
-            <h2 className="mt-4 font-display text-3xl tracking-tight sm:text-4xl">
-              Open a project, underwrite a deal, upload diligence, and track the
-              schedule — no account required.
-            </h2>
-          </div>
-          <Link
-            href="/workspace"
-            className="bg-copper px-6 py-3 text-sm font-medium text-paper transition hover:bg-copper-deep"
+      {/* Secondary band — one job: how it feels to use */}
+      <section className="relative overflow-hidden bg-ink text-paper">
+        <div className="grid min-h-[70vh] lg:grid-cols-2">
+          <div
+            className="relative min-h-[40vh] bg-cover bg-center lg:min-h-full"
+            style={{ backgroundImage: `url('${YARD_IMG}')` }}
           >
-            Get started free
-          </Link>
+            <div className="absolute inset-0 bg-forest/30 mix-blend-multiply" />
+            <div className="absolute inset-0 bg-gradient-to-t from-ink/60 to-transparent lg:bg-gradient-to-r" />
+          </div>
+
+          <div className="flex flex-col justify-center px-5 py-16 sm:px-10 sm:py-24 lg:px-16">
+            <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-signal">
+              Not a spreadsheet mood
+            </p>
+            <h2 className="mt-4 font-display text-4xl leading-[1.05] tracking-tight sm:text-5xl">
+              Itemize hard. Final numbers loud.
+            </h2>
+            <p className="mt-5 max-w-md text-base leading-relaxed text-sand/85">
+              Demo, structure, MEP, finishes, soft costs — line them out, then
+              flip or hold against real all-in capital. One deal. Your numbers.
+            </p>
+            <ul className="mt-10 space-y-4 border-t border-white/15 pt-8 text-sm text-sand/90">
+              <li className="flex gap-3">
+                <span className="text-signal">01</span>
+                Pick ground-up or rehab — residential or commercial
+              </li>
+              <li className="flex gap-3">
+                <span className="text-signal">02</span>
+                Build the budget item by item (not a vague lump sum)
+              </li>
+              <li className="flex gap-3">
+                <span className="text-signal">03</span>
+                See profit, ROI, NOI, and cash flow update live
+              </li>
+            </ul>
+            <Link
+              href="/deals/new"
+              className="mt-10 inline-flex w-fit bg-paper px-6 py-3 text-sm font-semibold text-ink transition hover:bg-signal hover:text-paper"
+            >
+              Open a blank deal →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative overflow-hidden border-b border-line bg-stone">
+        <div
+          className="pointer-events-none absolute -right-20 top-0 font-display text-[clamp(8rem,28vw,18rem)] leading-none text-ink/[0.04]"
+          aria-hidden
+        >
+          $
+        </div>
+        <div className="relative mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-signal">
+              Ready when you are
+            </p>
+            <h2 className="mt-4 font-display text-4xl tracking-tight text-ink sm:text-5xl">
+              Start rough. Tighten the numbers as you go.
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-muted">
+              Deals live in this browser for now — no account wall. Come back,
+              tweak costs, re-run the exit.
+            </p>
+          </div>
+          <div className="mt-12 flex flex-wrap gap-3">
+            <Link href="/deals/new" className="btn-signal">
+              New deal
+            </Link>
+            <Link href="/deals/find" className="btn-ghost">
+              Find deals
+            </Link>
+            <Link href="/deals" className="btn-ghost">
+              My deals
+            </Link>
+          </div>
         </div>
       </section>
     </>

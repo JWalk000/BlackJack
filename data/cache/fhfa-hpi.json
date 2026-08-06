@@ -1,0 +1,27 @@
+{
+  "provider": "fhfa",
+  "source": "FHFA HPI (hpi_master.csv)",
+  "license": "Public domain / FHFA official release",
+  "researchPage": "https://www.fhfa.gov/data/hpi",
+  "pulledAt": "2026-08-06T23:23:17.413Z",
+  "metros": [
+    {
+      "marketId": "houston",
+      "placeId": "26420",
+      "placeName": "Houston-Pasadena-The Woodlands, TX",
+      "frequency": "quarterly",
+      "flavor": "all-transactions",
+      "latest": {
+        "year": 2026,
+        "period": 1,
+        "index": 410.73
+      },
+      "priorYear": {
+        "year": 2025,
+        "period": 1,
+        "index": 405.26
+      },
+      "yoyPct": 1.3
+    }
+  ]
+}

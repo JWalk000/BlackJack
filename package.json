@@ -7,37 +7,23 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:up": "docker compose up -d",
-    "db:down": "docker compose down",
-    "db:seed": "tsx scripts/seed-demo.ts",
-    "db:ingest": "tsx scripts/ingest/run-ingest.ts --market all",
-    "db:ingest:houston": "tsx scripts/ingest/run-ingest.ts --market houston",
-    "db:ingest:virginia": "tsx scripts/ingest/run-ingest.ts --market virginia",
-    "data:pull": "tsx scripts/data/pull-free.ts",
-    "data:pull:hpi": "tsx scripts/data/pull-free.ts --skip-parcels",
-    "data:pull:parcels": "tsx scripts/data/pull-free.ts --skip-hpi",
-    "math:check": "tsx scripts/check-underwriting-math.ts"
+    "data:pull": "node scripts/data/pull-market-data.mjs",
+    "data:pull:hpi": "node scripts/data/pull-market-data.mjs --skip-parcels",
+    "data:pull:parcels": "node scripts/data/pull-market-data.mjs --skip-hpi"
   },
   "dependencies": {
-    "dotenv": "^17.4.2",
-    "leaflet": "^1.9.4",
     "next": "16.2.12",
-    "pg": "^8.22.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "react-leaflet": "^5.0.0"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/leaflet": "^1.9.22",
     "@types/node": "^20",
-    "@types/pg": "^8.20.3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",
-    "tsx": "^4.23.5",
     "typescript": "^5"
   }
 }
