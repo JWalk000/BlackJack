@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+:root {
+  /* Architectural: deep olive ink, limestone field, oxidized copper accent */
+  --ink: #0a1410;
+  --forest: #163028;
+  --canopy: #2a4f40;
+  --sage: #6a8b79;
+  --mist: #c8d6ce;
+  --limestone: #e9e4d9;
+  --paper: #f3efe7;
+  --copper: #c2743a;
+  --copper-deep: #8f4d24;
+  --steel: #3a464e;
+  --line: rgba(10, 20, 16, 0.12);
+  --background: var(--paper);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ink: var(--ink);
+  --color-forest: var(--forest);
+  --color-canopy: var(--canopy);
+  --color-sage: var(--sage);
+  --color-mist: var(--mist);
+  --color-limestone: var(--limestone);
+  --color-paper: var(--paper);
+  --color-copper: var(--copper);
+  --color-copper-deep: var(--copper-deep);
+  --color-steel: var(--steel);
+  --color-line: var(--line);
+  --font-sans: var(--font-manrope);
+  --font-display: var(--font-fraunces);
+  --font-mono: var(--font-jetbrains);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-manrope), system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--mist);
+  color: var(--ink);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes draw-line {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-rise {
+  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-rise-delay-1 {
+  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
+.animate-rise-delay-2 {
+  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
+}
+
+.animate-rise-delay-3 {
+  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.36s both;
+}
+
+.animate-fade {
+  animation: fade-in 1.2s ease both;
+}
+
+.animate-draw {
+  transform-origin: left;
+  animation: draw-line 1s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2.8s ease-in-out infinite;
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(245, 241, 234, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 241, 234, 0.04) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+.texture-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+}
