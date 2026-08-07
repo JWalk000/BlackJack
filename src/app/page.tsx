@@ -126,12 +126,6 @@ export default function HomePage() {
                 <p className="max-w-sm text-[12px] leading-snug tracking-wide text-sand/70 sm:text-[13px]">
                   Property · itemized costs · final numbers · bank package
                 </p>
-                <Link
-                  href="/deals"
-                  className="inline-flex min-h-10 w-fit items-center text-sm font-medium text-sand/85 underline-offset-4 transition hover:text-paper hover:underline"
-                >
-                  My deals
-                </Link>
               </div>
 
               {/* Mobile / tablet: Pro + Team under CTAs */}
