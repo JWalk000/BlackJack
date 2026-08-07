@@ -176,20 +176,20 @@ export function DealWorkspace({
             onClick={() => {
               goTab(t.id);
             }}
-            className={`min-h-12 shrink-0 border-b-2 px-4 py-4 text-base font-medium tracking-wide transition sm:min-h-11 sm:px-5 sm:py-3.5 ${
+            className={`min-h-14 shrink-0 border-b-2 px-5 py-4 text-lg font-medium leading-snug tracking-wide transition sm:min-h-12 sm:px-6 sm:py-4 ${
               tab === t.id
                 ? "border-signal text-ink"
                 : "border-transparent text-muted hover:text-ink"
             }`}
           >
-            <span className="sm:hidden">
+            <span className="whitespace-normal sm:hidden">
               {t.id === "property"
                 ? "Property"
                 : t.id === "costs"
                   ? "Costs"
                   : "Numbers"}
             </span>
-            <span className="hidden sm:inline">{t.label}</span>
+            <span className="hidden whitespace-normal sm:inline">{t.label}</span>
           </button>
         ))}
       </div>
