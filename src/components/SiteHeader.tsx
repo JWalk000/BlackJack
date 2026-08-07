@@ -182,11 +182,11 @@ export function SiteHeader() {
               href="/deals/new"
               className={
                 isHome
-                  ? "inline-flex min-h-11 items-center bg-signal px-4 py-2 text-sm font-semibold text-paper transition hover:bg-brass hover:text-ink"
-                  : "btn-signal !min-h-11 !py-2"
+                  ? "inline-flex min-h-11 max-w-[11.5rem] items-center justify-center bg-signal px-3 py-2 text-center text-[13px] font-semibold leading-tight text-paper transition hover:bg-brass hover:text-ink lg:max-w-none lg:px-4 lg:text-sm"
+                  : "btn-signal !min-h-11 !max-w-[11.5rem] !px-3 !py-2 !text-center !text-[13px] !leading-tight lg:!max-w-none lg:!px-4 lg:!text-sm"
               }
             >
-              New deal
+              Develop the numbers
             </Link>
           </nav>
 
@@ -196,11 +196,11 @@ export function SiteHeader() {
               href="/deals/new"
               className={
                 isHome
-                  ? "inline-flex min-h-11 items-center bg-signal px-3.5 py-2 text-sm font-semibold text-paper transition hover:bg-brass hover:text-ink"
-                  : "btn-signal !min-h-11 !px-3.5 !py-2"
+                  ? "inline-flex min-h-11 max-w-[9.5rem] items-center justify-center bg-signal px-2.5 py-1.5 text-center text-[11px] font-semibold leading-tight text-paper transition hover:bg-brass hover:text-ink"
+                  : "btn-signal !min-h-11 !max-w-[9.5rem] !px-2.5 !py-1.5 !text-center !text-[11px] !leading-tight"
               }
             >
-              New deal
+              Develop the numbers
             </Link>
             <button
               type="button"
