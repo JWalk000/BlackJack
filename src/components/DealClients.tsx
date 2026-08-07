@@ -17,7 +17,7 @@ import type { Deal } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
 import { useBilling } from "@/lib/billing/context";
 import { checkCanCreateDeal } from "@/lib/billing/entitlements";
-import { FREE_DEAL_LIMIT } from "@/lib/billing/plans";
+import { FREE_DEAL_LIMIT, isBillingFreeMode } from "@/lib/billing/plans";
 import {
   deleteCloudDeal,
   fetchCloudDealById,
@@ -46,6 +46,8 @@ export function NewDealClient() {
   const { user } = useAuth();
   const { isPro, freeMode, freeDealsCreated, recordFreeDealCreated } =
     useBilling();
+  // Always honor build-time free launch lock (don't trust only context).
+  const openCreate = freeMode || isBillingFreeMode();
   const [buildMode, setBuildMode] = useState<Deal["buildMode"]>("rehab");
   const [propertyClass, setPropertyClass] =
     useState<Deal["propertyClass"]>("residential");
@@ -55,8 +57,8 @@ export function NewDealClient() {
   });
 
   async function start() {
-    // Signed-out ok: deals save in this browser. Free mode = no 1-deal cap.
-    if (freeMode) {
+    // Signed-out ok: localStorage only. Never block create while product is free.
+    if (openCreate) {
       const deal = createDeal({
         buildMode,
         propertyClass,
@@ -106,7 +108,7 @@ export function NewDealClient() {
       <p className="mt-3 max-w-md text-base leading-relaxed text-muted">
         Ground-up or rehab, residential or commercial. You can change this
         later inside the deal.
-        {!freeMode && !isPro ? (
+        {!openCreate && !isPro ? (
           <>
             {" "}
             Free plan includes {FREE_DEAL_LIMIT} deal in this browser.{" "}
