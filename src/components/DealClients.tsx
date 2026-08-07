@@ -282,9 +282,11 @@ export function DealsListClient() {
           <Link href="/team" className="btn-ghost w-full sm:w-auto">
             Team
           </Link>
+          {/* FIND_DEALS_NAV — re-enable when ready
           <Link href="/deals/find" className="btn-ghost w-full sm:w-auto">
             Find deals
           </Link>
+          */}
           <Link
             href={freeCreateUsed && !isPro ? "/pricing" : "/deals/new"}
             className="btn-signal w-full sm:w-auto"
@@ -363,9 +365,11 @@ export function DealsListClient() {
             for sell or hold — or screen open-data leads first.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
+            {/* FIND_DEALS_NAV — re-enable when ready
             <Link href="/deals/find" className="btn-ghost">
               Find deals
             </Link>
+            */}
             <Link
               href={freeCreateUsed && !isPro ? "/pricing" : "/deals/new"}
               className="btn-signal"

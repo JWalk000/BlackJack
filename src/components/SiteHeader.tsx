@@ -100,6 +100,7 @@ export function SiteHeader() {
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-5 md:flex">
+            {/* FIND_DEALS_NAV — re-enable when ready
             <NavLink
               href="/deals/find"
               isHome={isHome}
@@ -107,6 +108,7 @@ export function SiteHeader() {
             >
               Find deals
             </NavLink>
+            */}
             <NavLink
               href="/deals"
               isHome={isHome}
@@ -249,7 +251,8 @@ export function SiteHeader() {
             <nav className="mx-auto flex max-w-6xl flex-col px-5 py-3 sm:px-8">
               {(
                 [
-                  ["/deals/find", "Find deals", pathname?.startsWith("/deals/find")],
+                  // FIND_DEALS_NAV — re-enable when ready
+                  // ["/deals/find", "Find deals", pathname?.startsWith("/deals/find")],
                   ["/deals", "My deals", pathname === "/deals"],
                   ["/team", "Team", pathname === "/team"],
                   ["/pricing", "Pricing", pathname === "/pricing"],
