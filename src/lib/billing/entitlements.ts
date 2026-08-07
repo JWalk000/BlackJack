@@ -2,7 +2,7 @@ import {
   FREE_DEAL_LIMIT_MESSAGE,
   getEffectiveFreeDealsCreated,
 } from "./free-deal-usage";
-import { FREE_DEAL_LIMIT } from "./plans";
+import { FREE_DEAL_LIMIT, isBillingFreeMode } from "./plans";
 
 export type GateResult =
   | { ok: true }
@@ -11,11 +11,16 @@ export type GateResult =
 /**
  * Gate new deal creation. Free users are limited by lifetime free creates
  * (not current deal list length — deleting does not free a slot).
+ *
+ * Free-mode product (default): always allow create — no tooltips, no 1-deal cap.
+ * Paid gates only when BILLING_ENFORCED / NEXT_PUBLIC_BILLING_ENFORCED === "true".
  */
 export function checkCanCreateDeal(
   isPro: boolean,
   options?: { cloudFreeDealsCreated?: number | null },
 ): GateResult {
+  // Free mode first — signed out or in, unlimited creates until billing is on.
+  if (isBillingFreeMode()) return { ok: true };
   if (isPro) return { ok: true };
   const created = getEffectiveFreeDealsCreated(options?.cloudFreeDealsCreated);
   if (created >= FREE_DEAL_LIMIT) {
@@ -29,7 +34,7 @@ export function checkCanCreateDeal(
 }
 
 export function checkCanCloudSync(isPro: boolean): GateResult {
-  if (isPro) return { ok: true };
+  if (isBillingFreeMode() || isPro) return { ok: true };
   return {
     ok: false,
     reason: "cloud_pro",
@@ -39,7 +44,7 @@ export function checkCanCloudSync(isPro: boolean): GateResult {
 }
 
 export function checkCanSharePackage(isPro: boolean): GateResult {
-  if (isPro) return { ok: true };
+  if (isBillingFreeMode() || isPro) return { ok: true };
   return {
     ok: false,
     reason: "share_pro",

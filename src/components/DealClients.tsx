@@ -44,7 +44,8 @@ type SaveStatus = "idle" | "saving" | "saved" | "error";
 export function NewDealClient() {
   const router = useRouter();
   const { user } = useAuth();
-  const { isPro, freeDealsCreated, recordFreeDealCreated } = useBilling();
+  const { isPro, freeMode, freeDealsCreated, recordFreeDealCreated } =
+    useBilling();
   const [buildMode, setBuildMode] = useState<Deal["buildMode"]>("rehab");
   const [propertyClass, setPropertyClass] =
     useState<Deal["propertyClass"]>("residential");
@@ -54,6 +55,19 @@ export function NewDealClient() {
   });
 
   async function start() {
+    // Signed-out ok: deals save in this browser. Free mode = no 1-deal cap.
+    if (freeMode) {
+      const deal = createDeal({
+        buildMode,
+        propertyClass,
+        costItems: templateCostItems(buildMode, propertyClass),
+      });
+      const saved = saveDeal(deal);
+      if (user) void upsertCloudDeal(saved);
+      router.push(`/deals/${deal.id}`);
+      return;
+    }
+
     const gate = checkCanCreateDeal(isPro, {
       cloudFreeDealsCreated: freeDealsCreated,
     });
@@ -92,7 +106,7 @@ export function NewDealClient() {
       <p className="mt-3 max-w-md text-base leading-relaxed text-muted">
         Ground-up or rehab, residential or commercial. You can change this
         later inside the deal.
-        {!isPro ? (
+        {!freeMode && !isPro ? (
           <>
             {" "}
             Free plan includes {FREE_DEAL_LIMIT} deal in this browser.{" "}
@@ -176,7 +190,7 @@ export function NewDealClient() {
 
 export function DealsListClient() {
   const { cloudReady, user, loading: authLoading } = useAuth();
-  const { isPro, freeDealsCreated } = useBilling();
+  const { isPro, freeMode, freeDealsCreated } = useBilling();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [ready, setReady] = useState(false);
   const [source, setSource] = useState<"local" | "cloud" | "merged">("local");
@@ -185,7 +199,9 @@ export function DealsListClient() {
   const [migrateMsg, setMigrateMsg] = useState<string | null>(null);
   const [hasLocalOnly, setHasLocalOnly] = useState(false);
   const [myTeam, setMyTeam] = useState<MyTeam | null>(null);
-  const freeCreateUsed = freeDealsCreated >= FREE_DEAL_LIMIT;
+  /** Only when paid gates on and user not entitled. */
+  const freeCreateBlocked =
+    !freeMode && !isPro && freeDealsCreated >= FREE_DEAL_LIMIT;
 
   const refresh = useCallback(async () => {
     const local = listDeals();
@@ -270,10 +286,12 @@ export function DealsListClient() {
             {user && isPro
               ? source === "merged"
                 ? " Synced with your cloud account."
-                : " Pro — saves go to the cloud."
+                : freeMode
+                  ? " Signed in — saves go to the cloud."
+                  : " Pro — saves go to the cloud."
               : user && myTeam
                 ? " Team deals are shared with your roster; personal free deals stay local."
-                : !isPro
+                : !freeMode && !isPro
                   ? ` Free — local only (${FREE_DEAL_LIMIT} deal create).`
                   : " Stored in this browser until you sign in."}
           </p>
@@ -288,7 +306,7 @@ export function DealsListClient() {
           </Link>
           */}
           <Link
-            href={freeCreateUsed && !isPro ? "/pricing" : "/deals/new"}
+            href={freeCreateBlocked ? "/pricing" : "/deals/new"}
             className="btn-signal w-full sm:w-auto"
           >
             New deal
@@ -296,11 +314,11 @@ export function DealsListClient() {
         </div>
       </div>
 
-      {!isPro ? (
+      {!freeMode && !isPro ? (
         <div className="mt-8 flex flex-col gap-3 border border-line bg-stone/50 px-4 py-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <p className="min-w-0 text-muted">
             Free plan:{" "}
-            {freeCreateUsed
+            {freeCreateBlocked
               ? "1 free deal create used (deleting does not free a slot)"
               : "1 free deal create remaining"}{" "}
             · no personal cloud sync.
@@ -371,10 +389,10 @@ export function DealsListClient() {
             </Link>
             */}
             <Link
-              href={freeCreateUsed && !isPro ? "/pricing" : "/deals/new"}
+              href={freeCreateBlocked ? "/pricing" : "/deals/new"}
               className="btn-signal"
             >
-              {freeCreateUsed && !isPro
+              {freeCreateBlocked
                 ? "Upgrade for more deals"
                 : "Create your first deal"}
             </Link>
@@ -450,7 +468,7 @@ export function DealsListClient() {
 export function DealEditorClient({ id }: { id: string }) {
   const router = useRouter();
   const { user } = useAuth();
-  const { isPro } = useBilling();
+  const { isPro, freeMode } = useBilling();
   const [deal, setDeal] = useState<Deal | null>(null);
   const [tab, setTab] = useState<"property" | "costs" | "analysis">(
     "property",
@@ -465,11 +483,13 @@ export function DealEditorClient({ id }: { id: string }) {
   const timerRef = useRef<number | null>(null);
   const userRef = useRef(user);
   const isProRef = useRef(isPro);
+  const freeModeRef = useRef(freeMode);
   const myTeamRef = useRef(myTeam);
   const savedClearTimerRef = useRef<number | null>(null);
 
   userRef.current = user;
   isProRef.current = isPro;
+  freeModeRef.current = freeMode;
   myTeamRef.current = myTeam;
 
   const shouldCloudSync = useCallback((d: Deal) => {
@@ -508,8 +528,15 @@ export function DealEditorClient({ id }: { id: string }) {
 
       if (!shouldCloudSync(saved)) {
         setSaveStatus("saved");
-        if (userRef.current && !isProRef.current && !saved.teamId) {
-          setCloudNote("Saved locally · cloud sync requires Pro or share with team");
+        if (
+          userRef.current &&
+          !freeModeRef.current &&
+          !isProRef.current &&
+          !saved.teamId
+        ) {
+          setCloudNote(
+            "Saved locally · cloud sync requires Pro or share with team",
+          );
         }
         if (savedClearTimerRef.current != null) {
           window.clearTimeout(savedClearTimerRef.current);
@@ -685,7 +712,7 @@ export function DealEditorClient({ id }: { id: string }) {
       {cloudNote ? (
         <p className="mb-4 text-sm text-muted" role="status">
           {cloudNote}
-          {!isPro && !deal.teamId ? (
+          {!freeMode && !isPro && !deal.teamId ? (
             <>
               {" · "}
               <Link href="/pricing" className="text-signal">

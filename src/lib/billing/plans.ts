@@ -10,6 +10,41 @@ export const TEAM_SEAT_LIMIT = 5;
 
 export type PlanId = "free" | "pro" | "team";
 
+/**
+ * Launch lock: product is free for everyone until you flip this off.
+ * Env flags alone were still blocking deploys when accidentally set on Vercel.
+ * Stripe products / Checkout / pricing UI stay available for optional pay.
+ *
+ * When ready to charge: set BILLING_FREE_FOR_EVERYONE = false, then set both
+ *   BILLING_ENFORCED=true
+ *   NEXT_PUBLIC_BILLING_ENFORCED=true
+ * and redeploy.
+ */
+export const BILLING_FREE_FOR_EVERYONE = true;
+
+/**
+ * Product access is free until billing is turned on.
+ *
+ * Free mode is the DEFAULT. Unpaid / signed-out users get unlimited local deals
+ * (Pro-like cloud when signed in) and team-create. Stripe stays optional.
+ *
+ * Only exact string "true" on both env flags enforces paywalls (and only when
+ * BILLING_FREE_FOR_EVERYONE is false).
+ */
+export function isBillingEnforced(): boolean {
+  if (BILLING_FREE_FOR_EVERYONE) return false;
+  // NEXT_PUBLIC_* is inlined for browser bundles at build time.
+  // BILLING_ENFORCED is server-only (API routes / SSR); undefined in client = free.
+  const publicFlag = process.env.NEXT_PUBLIC_BILLING_ENFORCED;
+  const serverFlag = process.env.BILLING_ENFORCED;
+  return publicFlag === "true" || serverFlag === "true";
+}
+
+/** Inverse of isBillingEnforced — free product mode (default ON). */
+export function isBillingFreeMode(): boolean {
+  return !isBillingEnforced();
+}
+
 /** Stripe subscription statuses that count as paying (Pro or Team). */
 export const PAID_ACTIVE_STATUSES = new Set([
   "active",
@@ -21,16 +56,21 @@ export const PAID_ACTIVE_STATUSES = new Set([
 export const PRO_ACTIVE_STATUSES = PAID_ACTIVE_STATUSES;
 
 /**
- * Paid cloud entitlements: unlimited personal deals, cloud sync, share links.
+ * Cloud entitlements: unlimited personal deals, cloud sync, share links.
  * Team plan owners get the same cloud toolkit as Pro, plus 5 seats.
  * Free members on a team do not get this — they only see shared team deals.
+ *
+ * When billing is free-mode (default), everyone is cloud-entitled without pay.
+ * When BILLING_ENFORCED=true: requires plan pro|team AND a paying status
+ * (Stripe is the only production writer of those fields).
  */
 export function isCloudEntitled(
   plan: PlanId | string | null | undefined,
   status?: string | null,
 ): boolean {
+  if (isBillingFreeMode()) return true;
   if (plan !== "pro" && plan !== "team") return false;
-  if (!status) return true;
+  if (!status) return false;
   return PAID_ACTIVE_STATUSES.has(status);
 }
 
@@ -42,12 +82,44 @@ export function isProEntitled(
   return isCloudEntitled(plan, status);
 }
 
+/**
+ * Team owner / create-team / invite entitlements.
+ * Free mode: all users (so create/share team works without Stripe).
+ * Enforced: paid plan=team + active status only.
+ */
 export function isTeamPlan(
   plan: PlanId | string | null | undefined,
   status?: string | null,
 ): boolean {
+  if (isBillingFreeMode()) return true;
   if (plan !== "team") return false;
-  if (!status) return true;
+  if (!status) return false;
+  return PAID_ACTIVE_STATUSES.has(status);
+}
+
+/**
+ * Real Stripe-paid Pro only (ignores free-mode product grants).
+ * Use for Subscribe / Manage billing UI — not product feature gates.
+ */
+export function isPaidProPlan(
+  plan: PlanId | string | null | undefined,
+  status?: string | null,
+): boolean {
+  if (plan !== "pro") return false;
+  if (!status) return false;
+  return PAID_ACTIVE_STATUSES.has(status);
+}
+
+/**
+ * Real Stripe-paid Team only (ignores free-mode product grants).
+ * Use for Subscribe / Manage billing UI — not product feature gates.
+ */
+export function isPaidTeamPlan(
+  plan: PlanId | string | null | undefined,
+  status?: string | null,
+): boolean {
+  if (plan !== "team") return false;
+  if (!status) return false;
   return PAID_ACTIVE_STATUSES.has(status);
 }
 
@@ -87,7 +159,7 @@ export const PLAN_COPY = {
       `${TEAM_SEAT_LIMIT} seats (owner + ${TEAM_SEAT_LIMIT - 1} invites)`,
       "Shared team deals for the whole roster",
       "Owner invites by email or phone",
-      "Create team in-app (Stripe Team Checkout soon)",
+      "Create team in-app; Stripe Team Checkout available",
     ],
   },
 } as const;
