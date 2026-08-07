@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Fraunces, Source_Sans_3 } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
 import { SiteHeader } from "@/components/SiteHeader";
+import { AuthProvider } from "@/lib/auth-context";
+import { BillingProvider } from "@/lib/billing/context";
 import "./globals.css";
 
 const display = Fraunces({
@@ -30,8 +32,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
       <body className="font-body antialiased">
-        <SiteHeader />
-        <AppShell>{children}</AppShell>
+        <AuthProvider>
+          <BillingProvider>
+            <SiteHeader />
+            <AppShell>{children}</AppShell>
+          </BillingProvider>
+        </AuthProvider>
       </body>
     </html>
   );

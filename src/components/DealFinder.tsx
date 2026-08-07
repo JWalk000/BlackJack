@@ -30,7 +30,10 @@ import {
 } from "@/lib/deal-finder";
 import { createDeal, saveDeal, templateCostItems } from "@/lib/deals";
 import { money } from "@/lib/underwriting";
+import { useBilling } from "@/lib/billing/context";
+import { checkCanCreateDeal } from "@/lib/billing/entitlements";
 import { Field, MoneyInput, NumberInput, inputClass } from "./ui";
+import { BillingToast, type BillingToastState } from "./BillingToast";
 
 type LeadForm = {
   type: "home" | "land";
@@ -67,6 +70,7 @@ function sourceBadge(listing: Listing | FreeLeadListing): string {
 
 export function DealFinder() {
   const router = useRouter();
+  const { isPro, freeDealsCreated, recordFreeDealCreated } = useBilling();
   const inventory = useMemo(() => getFinderInventory(), []);
   const leadsMeta = useMemo(() => getFreeLeadsMeta(), []);
   const compsMeta = useMemo(() => getAreaCompsMeta(), []);
@@ -81,6 +85,10 @@ export function DealFinder() {
   const [lead, setLead] = useState<LeadForm>(emptyLead);
   const [comps, setComps] = useState<AreaComp[]>(() => defaultCompsTable());
   const [showComps, setShowComps] = useState(false);
+  const [toast, setToast] = useState<BillingToastState>({
+    open: false,
+    message: "",
+  });
 
   const allListings = useMemo(
     () => [...userListings, ...inventory],
@@ -128,7 +136,16 @@ export function DealFinder() {
     leadsMeta.asOf ||
     "—";
 
-  function startDealFromListing(listing: ScoredListing | Listing | SampleListing) {
+  async function startDealFromListing(
+    listing: ScoredListing | Listing | SampleListing,
+  ) {
+    const gate = checkCanCreateDeal(isPro, {
+      cloudFreeDealsCreated: freeDealsCreated,
+    });
+    if (!gate.ok) {
+      setToast({ open: true, message: gate.message });
+      return;
+    }
     const isLand = listing.type === "land";
     const lotSf =
       listing.acres != null && listing.acres > 0
@@ -190,6 +207,9 @@ export function DealFinder() {
       ),
     });
     saveDeal(deal);
+    if (!isPro) {
+      await recordFreeDealCreated();
+    }
     router.push(`/deals/${deal.id}`);
   }
 
@@ -328,8 +348,12 @@ export function DealFinder() {
               <option value="land">Land / vacant</option>
             </select>
           </Field>
-          <Field label="Max assessor value" hint="0 = no max">
-            <MoneyInput value={maxPrice} onChange={setMaxPrice} />
+          <Field label="Max assessor value">
+            <MoneyInput
+              value={maxPrice}
+              onChange={setMaxPrice}
+              placeholder="No max"
+            />
           </Field>
           <Field label="County">
             <select
@@ -574,7 +598,7 @@ export function DealFinder() {
                 <button
                   type="button"
                   className="btn-signal w-full py-3"
-                  onClick={() => startDealFromListing(selected)}
+                  onClick={() => void startDealFromListing(selected)}
                 >
                   Start deal from lead
                 </button>
@@ -760,7 +784,7 @@ export function DealFinder() {
                   source: "user",
                   provider: "user",
                 };
-                startDealFromListing(listing);
+                void startDealFromListing(listing);
               }}
             >
               Start deal from lead
@@ -810,34 +834,22 @@ export function DealFinder() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="px-4 py-2">
-                      <input
-                        type="number"
-                        min={1}
-                        className={`${inputClass} max-w-[8rem]`}
+                    <td className="px-4 py-2 max-w-[8rem]">
+                      <NumberInput
                         value={c.medianHomePsf}
-                        onChange={(e) =>
-                          updateComp(
-                            c.county,
-                            "medianHomePsf",
-                            Number(e.target.value) || 0,
-                          )
+                        min={1}
+                        onChange={(n) =>
+                          updateComp(c.county, "medianHomePsf", n ?? 0)
                         }
                       />
                     </td>
-                    <td className="px-4 py-2">
-                      <input
-                        type="number"
+                    <td className="px-4 py-2 max-w-[10rem]">
+                      <NumberInput
+                        value={c.avgLandPerAcre}
                         min={1}
                         step={1000}
-                        className={`${inputClass} max-w-[10rem]`}
-                        value={c.avgLandPerAcre}
-                        onChange={(e) =>
-                          updateComp(
-                            c.county,
-                            "avgLandPerAcre",
-                            Number(e.target.value) || 0,
-                          )
+                        onChange={(n) =>
+                          updateComp(c.county, "avgLandPerAcre", n ?? 0)
                         }
                       />
                     </td>
@@ -855,6 +867,10 @@ export function DealFinder() {
           </div>
         ) : null}
       </section>
+      <BillingToast
+        state={toast}
+        onClose={() => setToast((t) => ({ ...t, open: false }))}
+      />
     </div>
   );
 }

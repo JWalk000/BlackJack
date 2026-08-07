@@ -73,9 +73,15 @@
     font: inherit;
   }
 
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button {
-    opacity: 0.4;
+    -webkit-appearance: none;
+    margin: 0;
   }
 
   ::selection {
@@ -129,8 +135,9 @@
   border: 1px solid var(--line);
   background: transparent;
   color: var(--ink);
+  font-weight: 600;
   font-size: 0.875rem;
-  padding: 0.65rem 1.25rem;
+  padding: 0.75rem 1.5rem;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .btn-ghost:hover {
@@ -168,7 +175,16 @@
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.studio-input:focus {
+/*
+ * MoneyInput: $ is absolutely positioned at left-3 (~0.75rem).
+ * Unlayered studio-input padding beats Tailwind pl-*, so pad here.
+ * pl-9 equivalent (2.25rem) keeps digits clear of the $ prefix.
+ */
+.studio-input.studio-input--money {
+  padding-left: 2.25rem;
+}
+.studio-input:focus,
+.studio-input:focus-within {
   border-color: var(--signal);
   box-shadow: 0 0 0 3px rgba(232, 93, 4, 0.12);
 }
@@ -252,6 +268,133 @@
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
   animation: grit 8s ease-in-out infinite;
   mix-blend-mode: overlay;
+}
+
+/* Pricing sticker / label language (homepage) */
+.sticker-pro {
+  position: relative;
+  background:
+    radial-gradient(ellipse 120% 80% at 10% 0%, rgba(255, 255, 255, 0.55), transparent 50%),
+    linear-gradient(165deg, #fffdf8 0%, var(--paper) 45%, #f0e8d8 100%);
+  border: 3px solid var(--ink);
+  box-shadow:
+    0 18px 40px rgba(12, 15, 14, 0.22),
+    0 4px 10px rgba(12, 15, 14, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  transform: rotate(1.25deg);
+}
+/* Team sticker sits next to Pro — same paper, opposite tilt + forest badge */
+.sticker-pro.sticker-team {
+  transform: rotate(-1.75deg);
+  background:
+    radial-gradient(ellipse 120% 80% at 90% 0%, rgba(255, 255, 255, 0.5), transparent 50%),
+    linear-gradient(195deg, #fffdf8 0%, var(--paper) 40%, #e8efe6 100%);
+}
+.sticker-pro.sticker-team .sticker-badge {
+  background: var(--forest);
+  color: var(--paper);
+}
+.sticker-pair {
+  /* Keep both tags on one row when width allows */
+  min-width: 0;
+}
+.sticker-pro::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1.5px dashed color-mix(in srgb, var(--forest) 45%, var(--line));
+  pointer-events: none;
+}
+.sticker-pro::after {
+  /* peel corner */
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 2.25rem;
+  height: 2.25rem;
+  background: linear-gradient(
+    225deg,
+    transparent 48%,
+    rgba(12, 15, 14, 0.07) 48%,
+    rgba(12, 15, 14, 0.07) 52%,
+    #ebe3d2 52%
+  );
+  border-bottom-left-radius: 2px;
+  box-shadow: -2px 2px 4px rgba(12, 15, 14, 0.08);
+  pointer-events: none;
+}
+.sticker-tape {
+  position: absolute;
+  top: -0.65rem;
+  left: 50%;
+  width: 4.5rem;
+  height: 1.15rem;
+  margin-left: -2.25rem;
+  background: linear-gradient(
+    180deg,
+    rgba(212, 160, 23, 0.45) 0%,
+    rgba(212, 160, 23, 0.28) 100%
+  );
+  transform: rotate(-2deg);
+  box-shadow: 0 1px 2px rgba(12, 15, 14, 0.08);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+.sticker-tape::before,
+.sticker-tape::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -12deg,
+    transparent,
+    transparent 3px,
+    rgba(255, 255, 255, 0.12) 3px,
+    rgba(255, 255, 255, 0.12) 4px
+  );
+  opacity: 0.6;
+}
+.sticker-free {
+  position: relative;
+  background:
+    linear-gradient(150deg, #fffef9 0%, var(--sand) 100%);
+  border: 2.5px solid var(--forest);
+  box-shadow:
+    0 12px 28px rgba(12, 15, 14, 0.18),
+    0 2px 6px rgba(12, 15, 14, 0.1);
+  transform: rotate(-2.5deg);
+}
+.sticker-free::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px dashed color-mix(in srgb, var(--forest) 35%, transparent);
+  pointer-events: none;
+}
+.sticker-badge {
+  display: inline-block;
+  border: 2px solid var(--ink);
+  background: var(--signal);
+  color: var(--paper);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.28rem 0.55rem;
+  box-shadow: 0 3px 0 rgba(12, 15, 14, 0.15);
+  transform: rotate(-1deg);
+}
+@media (max-width: 639px) {
+  .sticker-pro {
+    transform: rotate(0.4deg);
+  }
+  .sticker-pro.sticker-team {
+    transform: rotate(-0.6deg);
+  }
+  .sticker-free {
+    transform: rotate(-0.8deg);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

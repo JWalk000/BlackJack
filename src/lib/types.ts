@@ -75,6 +75,13 @@ export type Deal = {
   assumptions: DealAssumptions;
   financing: Financing;
   costItems: CostItem[];
+  /**
+   * When set, deal is shared with the whole team (cloud column user_deals.team_id).
+   * Personal free-deal limits still apply to creates owned by free users.
+   */
+  teamId?: string | null;
+  /** Cloud row owner — set when loaded from cloud for delete/share UI. */
+  ownerUserId?: string | null;
 };
 
 export type CostTemplateRow = {

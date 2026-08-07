@@ -101,6 +101,8 @@ export function createDeal(partial?: Partial<Deal>): Deal {
     financing: { ...emptyFinancing(), ...partial?.financing },
     costItems:
       partial?.costItems ?? templateCostItems(buildMode, propertyClass),
+    teamId: partial?.teamId ?? null,
+    ownerUserId: partial?.ownerUserId ?? null,
   };
 }
 
@@ -141,6 +143,8 @@ function normalizeDeal(raw: Deal): Deal {
       closingCostsManual: Boolean(legacy?.closingCostsManual),
     },
     costItems: Array.isArray(raw.costItems) ? raw.costItems : [],
+    teamId: raw.teamId ?? null,
+    ownerUserId: raw.ownerUserId ?? null,
   };
 }
 
@@ -148,16 +152,30 @@ export function getDeal(id: string): Deal | null {
   return listDeals().find((d) => d.id === id) ?? null;
 }
 
-export function saveDeal(deal: Deal): void {
+export function saveDeal(deal: Deal): Deal {
+  const updated = { ...deal, updatedAt: new Date().toISOString() };
   const deals = listDeals().filter((d) => d.id !== deal.id);
-  const next = [{ ...deal, updatedAt: new Date().toISOString() }, ...deals];
+  const next = [updated, ...deals];
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  return updated;
 }
 
 export function deleteDeal(id: string): void {
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify(listDeals().filter((d) => d.id !== id)),
+  );
+}
+
+/** Write many deals into localStorage (used when pulling cloud → browser). */
+export function replaceLocalDeals(deals: Deal[]): void {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(
+      deals
+        .map(normalizeDeal)
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    ),
   );
 }
 

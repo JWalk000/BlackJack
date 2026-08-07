@@ -1,5 +1,6 @@
 "use client";
 
+import type { KeyboardEvent } from "react";
 import type { CostItem } from "@/lib/types";
 import { COST_CATEGORY_ORDER } from "@/lib/types";
 import { money, uid } from "@/lib/underwriting";
@@ -15,6 +16,15 @@ function sortCategories(cats: string[]): string[] {
     if (sa !== sb) return sa - sb;
     return a.localeCompare(b);
   });
+}
+
+type CostNavField = "label" | "category" | "amount";
+
+function focusCostField(itemId: string, field: CostNavField) {
+  const el = document.querySelector<HTMLInputElement>(
+    `[data-cost-item="${itemId}"][data-cost-field="${field}"]`,
+  );
+  el?.focus();
 }
 
 export function CostItemizer({
@@ -60,6 +70,34 @@ export function CostItemizer({
   }, {});
 
   const categories = sortCategories(Object.keys(byCategory));
+  // Visual row order (categories top-to-bottom, rows within each block).
+  const orderedIds = categories.flatMap((cat) =>
+    byCategory[cat].map((i) => i.id),
+  );
+
+  function handleEnterNav(
+    e: KeyboardEvent<HTMLInputElement>,
+    itemId: string,
+    field: CostNavField,
+  ) {
+    if (e.key !== "Enter") return;
+    // Excel-style: never submit the parent form on Enter in a cost cell.
+    e.preventDefault();
+
+    if (field === "label") {
+      focusCostField(itemId, "category");
+      return;
+    }
+    if (field === "category") {
+      focusCostField(itemId, "amount");
+      return;
+    }
+
+    // Amount → next row Amount (same column); stay put on last row.
+    const idx = orderedIds.indexOf(itemId);
+    if (idx < 0 || idx >= orderedIds.length - 1) return;
+    focusCostField(orderedIds[idx + 1], "amount");
+  }
 
   const softTotal = items
     .filter((i) =>
@@ -154,10 +192,14 @@ export function CostItemizer({
                   <Field label="Label">
                     <input
                       className={inputClass}
+                      data-cost-item={item.id}
+                      data-cost-field="label"
                       value={item.label}
                       onChange={(e) =>
                         update(item.id, { label: e.target.value })
                       }
+                      onKeyDown={(e) => handleEnterNav(e, item.id, "label")}
+                      onFocus={(e) => e.currentTarget.select()}
                     />
                     {item.notes ? (
                       <p className="mt-1 text-xs text-muted">{item.notes}</p>
@@ -166,16 +208,29 @@ export function CostItemizer({
                   <Field label="Category">
                     <input
                       className={inputClass}
+                      data-cost-item={item.id}
+                      data-cost-field="category"
                       value={item.category}
                       onChange={(e) =>
                         update(item.id, { category: e.target.value })
                       }
+                      onKeyDown={(e) =>
+                        handleEnterNav(e, item.id, "category")
+                      }
+                      onFocus={(e) => e.currentTarget.select()}
                     />
                   </Field>
                   <Field label="Amount">
                     <MoneyInput
+                      id={`cost-amount-${item.id}`}
+                      name={`cost-amount-${item.id}`}
+                      data-cost-item={item.id}
+                      data-cost-field="amount"
                       value={item.amount}
                       onChange={(amount) => update(item.id, { amount })}
+                      onKeyDown={(e) =>
+                        handleEnterNav(e, item.id, "amount")
+                      }
                     />
                   </Field>
                   <div className="flex items-end">

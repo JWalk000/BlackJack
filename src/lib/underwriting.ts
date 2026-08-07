@@ -82,7 +82,8 @@ export function underwrite(deal: Deal): UnderwritingResult {
     1,
     (a.projectMonths || 0) + (a.monthsToSaleOrRent || 0),
   );
-  const projectMonths = Math.max(1, a.projectMonths || 1);
+  // Floor only in math — inputs may be blank/0 while the user is typing.
+  const projectMonths = Math.max(1, a.projectMonths || 0);
   const financingCost = shortTermFinancingCost(loanAmount, f, projectMonths);
   const totalAllIn = baseCapital + financingCost;
   const cashRequired = Math.max(0, totalAllIn - loanAmount);

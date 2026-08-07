@@ -1,4 +1,8 @@
 import Link from "next/link";
+import {
+  PRO_PRICE_USD_MONTHLY,
+  TEAM_PRICE_USD_MONTHLY,
+} from "@/lib/billing/plans";
 
 const HERO_IMG =
   "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=2400&q=80";
@@ -12,15 +16,77 @@ const MARQUEE = [
   "Residential",
   "Commercial",
   "Itemized costs",
-  "Flip math",
+  "Sell math",
   "Hold & rent",
   "Line by line",
 ];
 
+function PricingSticker({
+  variant,
+}: {
+  variant: "pro" | "team";
+}) {
+  const isPro = variant === "pro";
+  const price = isPro ? PRO_PRICE_USD_MONTHLY : TEAM_PRICE_USD_MONTHLY;
+  const label = isPro ? "Pro" : "Team";
+  const cta = isPro ? "Get Pro →" : "Team details →";
+  const line = isPro
+    ? "Unlimited deals · cloud sync · bank packages"
+    : "5 seats · shared deals · owner invites";
+  const href = isPro ? "/pricing" : "/team";
+
+  return (
+    <div className="relative w-[min(100%,11.75rem)] shrink-0 pb-2 pt-1 sm:w-[12.75rem]">
+      <div
+        className={`sticker-pro relative z-10 px-3.5 pb-3.5 pt-5 sm:px-4 sm:pb-4 sm:pt-6 ${
+          isPro ? "" : "sticker-team"
+        }`}
+      >
+        <span className="sticker-tape" aria-hidden />
+        <div className="relative z-[1]">
+          <span className="sticker-badge">{label}</span>
+          <p className="mt-2 font-display text-[2.35rem] leading-[0.85] tracking-tight text-ink sm:text-[2.65rem]">
+            ${price}
+            <span className="ml-0.5 align-baseline font-body text-xs font-semibold tracking-normal text-muted sm:text-sm">
+              /mo
+            </span>
+          </p>
+          <p className="mt-1.5 border-t border-ink/10 pt-2 text-[11px] leading-snug text-ink/80">
+            {line}
+          </p>
+          <Link
+            href={href}
+            className={`mt-3 inline-flex w-full items-center justify-center px-3 py-2 text-xs font-semibold shadow-[0_3px_0_0] shadow-ink/20 transition sm:text-sm ${
+              isPro
+                ? "bg-signal text-paper hover:bg-brass hover:text-ink hover:shadow-ink/10"
+                : "bg-forest text-paper hover:bg-canopy hover:shadow-ink/10"
+            }`}
+          >
+            {cta}
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Pro + Team side by side — same sticky-note cluster. */
+function StickerStack() {
+  return (
+    <div
+      className="sticker-pair flex flex-row flex-wrap items-start justify-center gap-2 sm:gap-3 lg:justify-end"
+      aria-label="Pro and Team pricing"
+    >
+      <PricingSticker variant="pro" />
+      <PricingSticker variant="team" />
+    </div>
+  );
+}
+
 export default function HomePage() {
   return (
     <>
-      {/* Full-bleed hero · one composition */}
+      {/* Full-bleed hero · one composition + pricing stickers */}
       <section className="relative min-h-[100svh] overflow-hidden bg-ink text-paper">
         <div className="absolute inset-0 overflow-hidden">
           <div
@@ -33,34 +99,48 @@ export default function HomePage() {
         </div>
 
         <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-5 pb-28 pt-28 sm:px-8 sm:pb-32 lg:justify-center lg:pb-24">
-          <p className="animate-rise text-[11px] font-medium uppercase tracking-[0.32em] text-signal">
-            Build the deal file
-          </p>
+          <div className="grid items-end gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)] lg:items-center lg:gap-8 xl:gap-10">
+            <div className="min-w-0">
+              <p className="animate-rise text-[11px] font-medium uppercase tracking-[0.32em] text-signal">
+                Build for the Future
+              </p>
 
-          <h1 className="animate-rise-1 mt-3 font-display text-[clamp(4.5rem,18vw,10rem)] leading-[0.88] tracking-tight text-paper">
-            Estate
-          </h1>
+              <h1 className="animate-rise-1 mt-3 font-display text-[clamp(4.5rem,18vw,10rem)] leading-[0.88] tracking-tight text-paper">
+                Estate
+              </h1>
 
-          <div className="animate-draw mt-5 h-1 w-28 origin-left bg-signal sm:w-36" />
+              <div className="animate-draw mt-5 h-1 w-28 origin-left bg-signal sm:w-36" />
 
-          <p className="animate-rise-2 mt-7 max-w-md text-lg leading-relaxed text-sand sm:text-xl">
-            Ground-up or rehab. Residential or commercial. Every cost broken
-            down — then the returns pop.
-          </p>
+              <p className="animate-rise-2 mt-7 max-w-md text-lg leading-relaxed text-sand sm:text-xl">
+                Ground-up or rehab. Residential or commercial. Every cost broken
+                down — then the returns pop.
+              </p>
 
-          <div className="animate-rise-3 mt-10 flex flex-wrap items-center gap-3">
-            <Link
-              href="/deals/new"
-              className="bg-signal px-7 py-3.5 text-sm font-semibold tracking-wide text-paper transition hover:bg-brass hover:text-ink"
-            >
-              Start a deal
-            </Link>
-            <Link
-              href="/deals"
-              className="border border-paper/40 px-7 py-3.5 text-sm font-medium text-paper transition hover:border-paper hover:bg-paper/10"
-            >
-              Open workspace
-            </Link>
+              <div className="animate-rise-3 mt-10 flex flex-wrap items-center gap-3">
+                <Link
+                  href="/deals/new"
+                  className="bg-signal px-7 py-3.5 text-sm font-semibold tracking-wide text-paper transition hover:bg-brass hover:text-ink"
+                >
+                  Start a deal
+                </Link>
+                <Link
+                  href="/deals"
+                  className="border border-paper/40 px-7 py-3.5 text-sm font-medium text-paper transition hover:border-paper hover:bg-paper/10"
+                >
+                  Open workspace
+                </Link>
+              </div>
+
+              {/* Mobile / tablet: Pro + Team side by side under CTAs */}
+              <div className="animate-rise-3 mt-10 lg:hidden">
+                <StickerStack />
+              </div>
+            </div>
+
+            {/* Desktop: Pro + Team tags side by side on the right */}
+            <div className="animate-rise-2 hidden justify-self-end lg:block">
+              <StickerStack />
+            </div>
           </div>
         </div>
 
@@ -101,7 +181,7 @@ export default function HomePage() {
             </h2>
             <p className="mt-5 max-w-md text-base leading-relaxed text-sand/85">
               Demo, structure, MEP, finishes, soft costs — line them out, then
-              flip or hold against real all-in capital. One deal. Your numbers.
+              sell or hold against real all-in capital. One deal. Your numbers.
             </p>
             <ul className="mt-10 space-y-4 border-t border-white/15 pt-8 text-sm text-sand/90">
               <li className="flex gap-3">
@@ -127,13 +207,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="relative overflow-hidden border-b border-line bg-stone">
-        <div
-          className="pointer-events-none absolute -right-20 top-0 font-display text-[clamp(8rem,28vw,18rem)] leading-none text-ink/[0.04]"
-          aria-hidden
-        >
-          $
-        </div>
+      <section
+        id="pricing"
+        className="relative border-b border-line bg-stone"
+      >
         <div className="relative mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
           <div className="max-w-2xl">
             <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-signal">
@@ -143,19 +220,24 @@ export default function HomePage() {
               Start rough. Tighten the numbers as you go.
             </h2>
             <p className="mt-4 text-base leading-relaxed text-muted">
-              Deals live in this browser for now — no account wall. Come back,
-              tweak costs, re-run the exit.
+              Free keeps deals in this browser. Pro syncs to the cloud. Team
+              shares deals across five seats.
             </p>
           </div>
-          <div className="mt-12 flex flex-wrap gap-3">
-            <Link href="/deals/new" className="btn-signal">
-              New deal
-            </Link>
-            <Link href="/deals/find" className="btn-ghost">
-              Find deals
-            </Link>
-            <Link href="/deals" className="btn-ghost">
-              My deals
+          <div className="mt-12 flex flex-col items-start gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href="/deals/new" className="btn-signal inline-flex items-center">
+                New deal
+              </Link>
+              <Link href="/deals" className="btn-ghost inline-flex items-center">
+                My deals
+              </Link>
+            </div>
+            <Link
+              href="/pricing"
+              className="text-sm font-medium text-muted transition hover:text-ink"
+            >
+              See pricing →
             </Link>
           </div>
         </div>
