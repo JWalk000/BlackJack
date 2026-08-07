@@ -176,7 +176,7 @@ export function DealWorkspace({
             onClick={() => {
               goTab(t.id);
             }}
-            className={`shrink-0 border-b-2 px-3 py-3.5 text-sm font-medium tracking-wide transition sm:px-4 ${
+            className={`min-h-12 shrink-0 border-b-2 px-4 py-4 text-base font-medium tracking-wide transition sm:min-h-11 sm:px-5 sm:py-3.5 ${
               tab === t.id
                 ? "border-signal text-ink"
                 : "border-transparent text-muted hover:text-ink"
