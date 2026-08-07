@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { normalizePhone } from "@/lib/contact";
@@ -13,12 +13,18 @@ export function AuthPanel({
   onClose,
   initialMode = "signin",
   redirectTo = "/deals",
+  onAuthenticated,
 }: {
   open: boolean;
   onClose: () => void;
   initialMode?: Mode;
-  /** Where to go after a successful sign-in (or sign-up with session). */
-  redirectTo?: string;
+  /**
+   * Where to go after a successful sign-in (or sign-up with session).
+   * Pass `null` to stay on the current page (e.g. pricing → checkout).
+   */
+  redirectTo?: string | null;
+  /** Fired after session is established, before optional navigation. */
+  onAuthenticated?: () => void;
 }) {
   const router = useRouter();
   const {
@@ -39,9 +45,23 @@ export function AuthPanel({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  /** Avoid double-fire from submit handler + session effect. */
+  const settledRef = useRef(false);
+
+  function finishAuth() {
+    if (settledRef.current) return;
+    settledRef.current = true;
+    onClose();
+    onAuthenticated?.();
+    if (redirectTo) {
+      router.push(redirectTo);
+      router.refresh();
+    }
+  }
 
   useEffect(() => {
     if (open) {
+      settledRef.current = false;
       setMode(initialMode);
       setError(null);
       setMessage(null);
@@ -50,13 +70,12 @@ export function AuthPanel({
     }
   }, [open, initialMode]);
 
-  // Once a session is present (sign-in or auto-confirmed sign-up), close + go to /deals.
+  // Once a session is present (sign-in or auto-confirmed sign-up), close + finish.
   useEffect(() => {
     if (!open || !user) return;
-    onClose();
-    router.push(redirectTo);
-    router.refresh();
-  }, [open, user, onClose, redirectTo, router]);
+    finishAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when session appears while open
+  }, [open, user]);
 
   if (!open) return null;
 
@@ -88,11 +107,10 @@ export function AuthPanel({
         setMessage(
           "Account created. If email confirmation is enabled in Supabase, check your inbox — otherwise you're signed in.",
         );
+        // Session may appear via onAuthStateChange → finishAuth effect.
         return;
       }
-      onClose();
-      router.push(redirectTo);
-      router.refresh();
+      finishAuth();
     } finally {
       setBusy(false);
     }
@@ -135,9 +153,7 @@ export function AuthPanel({
         setError(result.error);
         return;
       }
-      onClose();
-      router.push(redirectTo);
-      router.refresh();
+      finishAuth();
     } finally {
       setBusy(false);
     }

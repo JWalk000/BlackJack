@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useBilling } from "@/lib/billing/context";
 import {
@@ -13,6 +13,10 @@ import {
   TEAM_SEAT_LIMIT,
 } from "@/lib/billing/plans";
 import { AuthPanel } from "@/components/AuthPanel";
+import {
+  getSessionAuthHeaders,
+  parseApiJson,
+} from "@/lib/supabase/session-fetch";
 
 function PricingInner() {
   const { user, loading: authLoading } = useAuth();
@@ -24,6 +28,8 @@ function PricingInner() {
   const [busy, setBusy] = useState<"checkout" | "portal" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
+  /** After sign-in from Subscribe CTA, start Stripe Checkout once. */
+  const pendingCheckout = useRef(false);
 
   useEffect(() => {
     const checkout = searchParams.get("checkout");
@@ -40,27 +46,60 @@ function PricingInner() {
     }
   }, [searchParams, refresh]);
 
-  const startCheckout = useCallback(async () => {
+  const runCheckout = useCallback(async () => {
     setError(null);
-    if (!user) {
-      setAuthOpen(true);
-      return;
-    }
     setBusy("checkout");
     try {
-      const res = await fetch("/api/stripe/checkout", { method: "POST" });
-      const data = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !data.url) {
-        setError(data.error || "Could not start Checkout.");
+      const headers = await getSessionAuthHeaders();
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: {
+          ...headers,
+          Accept: "application/json",
+        },
+      });
+      const data = await parseApiJson<{ url?: string; error?: string }>(res);
+      if (data.parseError) {
+        setError(data.parseError);
         return;
       }
-      window.location.href = data.url;
+      if (!res.ok || !data.url) {
+        setError(
+          data.error ||
+            (res.status === 503
+              ? "Billing not configured. Ask the site owner to set Stripe env vars."
+              : "Could not start Checkout."),
+        );
+        return;
+      }
+      window.location.assign(data.url);
     } catch {
       setError("Network error starting Checkout.");
     } finally {
       setBusy(null);
     }
-  }, [user]);
+  }, []);
+
+  const startCheckout = useCallback(async () => {
+    setError(null);
+    if (authLoading) {
+      setError("Checking sign-in status… try again in a moment.");
+      return;
+    }
+    if (!user) {
+      pendingCheckout.current = true;
+      setAuthOpen(true);
+      return;
+    }
+    await runCheckout();
+  }, [authLoading, user, runCheckout]);
+
+  // Resume checkout after auth panel signs the user in.
+  useEffect(() => {
+    if (!user || !pendingCheckout.current) return;
+    pendingCheckout.current = false;
+    void runCheckout();
+  }, [user, runCheckout]);
 
   const openPortal = useCallback(async () => {
     setError(null);
@@ -70,13 +109,24 @@ function PricingInner() {
     }
     setBusy("portal");
     try {
-      const res = await fetch("/api/stripe/portal", { method: "POST" });
-      const data = (await res.json()) as { url?: string; error?: string };
+      const headers = await getSessionAuthHeaders();
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+        headers: {
+          ...headers,
+          Accept: "application/json",
+        },
+      });
+      const data = await parseApiJson<{ url?: string; error?: string }>(res);
+      if (data.parseError) {
+        setError(data.parseError);
+        return;
+      }
       if (!res.ok || !data.url) {
         setError(data.error || "Could not open billing portal.");
         return;
       }
-      window.location.href = data.url;
+      window.location.assign(data.url);
     } catch {
       setError("Network error opening portal.");
     } finally {
@@ -113,12 +163,6 @@ function PricingInner() {
           role="status"
         >
           {banner}
-        </p>
-      ) : null}
-
-      {error ? (
-        <p className="mt-4 text-sm text-loss" role="alert">
-          {error}
         </p>
       ) : null}
 
@@ -224,6 +268,15 @@ function PricingInner() {
                     : "Sign in to subscribe"}
             </button>
           )}
+
+          {error ? (
+            <p
+              className="mt-4 rounded-sm border border-loss/40 bg-loss/15 px-3 py-2 text-sm text-paper"
+              role="alert"
+            >
+              {error}
+            </p>
+          ) : null}
         </section>
 
         {/* Team */}
@@ -265,6 +318,10 @@ function PricingInner() {
                 ? "Open Team — $35/mo →"
                 : "Sign in for Team"}
           </button>
+          <p className="mt-3 text-xs leading-relaxed text-muted">
+            Team checkout in Stripe is not live yet — create a team in-app after
+            sign-in.
+          </p>
         </section>
       </div>
 
@@ -287,8 +344,20 @@ function PricingInner() {
 
       <AuthPanel
         open={authOpen}
-        onClose={() => setAuthOpen(false)}
+        onClose={() => {
+          setAuthOpen(false);
+          // User dismissed without signing in.
+          if (!user) pendingCheckout.current = false;
+        }}
         initialMode="signin"
+        redirectTo={null}
+        onAuthenticated={() => {
+          // Effect on `user` also resumes; this covers the same-frame case.
+          if (pendingCheckout.current) {
+            pendingCheckout.current = false;
+            void runCheckout();
+          }
+        }}
       />
     </div>
   );

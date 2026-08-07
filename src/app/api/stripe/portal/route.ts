@@ -1,33 +1,32 @@
 import { NextResponse } from "next/server";
 import { getAppUrl, getStripe, isStripeConfigured } from "@/lib/billing/stripe";
-import { tryCreateServerClient } from "@/lib/supabase/server";
+import { resolveRequestAuth } from "@/lib/supabase/server";
 import { fetchOwnProfile } from "@/lib/billing/profiles";
 
 export const runtime = "nodejs";
 
+const BILLING_NOT_CONFIGURED =
+  "Billing not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID_PRO_MONTHLY on the server (e.g. Vercel env).";
+
 export async function POST(request: Request) {
   try {
     if (!isStripeConfigured()) {
-      return NextResponse.json(
-        { error: "Stripe is not configured." },
-        { status: 503 },
-      );
+      return NextResponse.json({ error: BILLING_NOT_CONFIGURED }, { status: 503 });
     }
 
-    const supabase = await tryCreateServerClient();
-    if (!supabase) {
+    const auth = await resolveRequestAuth(request);
+    if (!auth.ok) {
       return NextResponse.json(
-        { error: "Auth is not configured (Supabase)." },
-        { status: 503 },
+        {
+          error:
+            auth.status === 401
+              ? "Sign in required."
+              : auth.error,
+        },
+        { status: auth.status },
       );
     }
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Sign in required." }, { status: 401 });
-    }
+    const { supabase, user } = auth;
 
     const profile = await fetchOwnProfile(supabase, user.id);
     if (!profile?.stripe_customer_id) {
@@ -46,6 +45,13 @@ export async function POST(request: Request) {
       customer: profile.stripe_customer_id,
       return_url: `${appUrl}/pricing`,
     });
+
+    if (!session.url) {
+      return NextResponse.json(
+        { error: "Stripe did not return a portal URL." },
+        { status: 500 },
+      );
+    }
 
     return NextResponse.json({ url: session.url });
   } catch (e) {

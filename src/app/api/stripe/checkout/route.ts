@@ -6,40 +6,31 @@ import {
   isStripeConfigured,
   randomIntegrationSuffix,
 } from "@/lib/billing/stripe";
-import { tryCreateServerClient, tryCreateServiceClient } from "@/lib/supabase/server";
-import { fetchOwnProfile, upsertProfileEntitlement } from "@/lib/billing/profiles";
+import {
+  resolveRequestAuth,
+  tryCreateServiceClient,
+} from "@/lib/supabase/server";
+import {
+  fetchOwnProfile,
+  upsertProfileEntitlement,
+} from "@/lib/billing/profiles";
 
 export const runtime = "nodejs";
+
+const BILLING_NOT_CONFIGURED =
+  "Billing not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID_PRO_MONTHLY on the server (e.g. Vercel env).";
 
 export async function POST(request: Request) {
   try {
     if (!isStripeConfigured()) {
-      return NextResponse.json(
-        {
-          error:
-            "Stripe is not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID_PRO_MONTHLY.",
-        },
-        { status: 503 },
-      );
+      return NextResponse.json({ error: BILLING_NOT_CONFIGURED }, { status: 503 });
     }
 
-    const supabase = await tryCreateServerClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { error: "Auth is not configured (Supabase)." },
-        { status: 503 },
-      );
+    const auth = await resolveRequestAuth(request);
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: "Sign in required to subscribe." },
-        { status: 401 },
-      );
-    }
+    const { supabase, user } = auth;
 
     const priceId = getStripePriceIdProMonthly()!;
     const stripe = getStripe();
