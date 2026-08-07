@@ -221,18 +221,13 @@ export default function HomePage() {
               shares deals across five seats.
             </p>
           </div>
-          <div className="mt-12 flex flex-col items-stretch gap-4 sm:items-start">
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-              <Link
-                href="/deals/new"
-                className="btn-signal w-full sm:w-auto"
-              >
-                New deal
-              </Link>
-              <Link href="/deals" className="btn-ghost w-full sm:w-auto">
-                My deals
-              </Link>
-            </div>
+          <div className="mt-12 flex flex-col items-stretch gap-4 sm:flex-row sm:flex-wrap sm:items-center">
+            <Link
+              href="/deals/new"
+              className="btn-signal w-full sm:w-auto"
+            >
+              New deal
+            </Link>
             <Link
               href="/pricing"
               className="inline-flex min-h-11 items-center text-sm font-medium text-muted transition hover:text-ink"

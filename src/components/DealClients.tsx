@@ -362,7 +362,7 @@ export function DealsListClient() {
           </p>
           <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted">
             Start a ground-up or rehab deal. Itemize costs and run final numbers
-            for sell or hold — or screen open-data leads first.
+            for sell or hold.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             {/* FIND_DEALS_NAV — re-enable when ready
