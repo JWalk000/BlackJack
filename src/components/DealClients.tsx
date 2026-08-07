@@ -278,16 +278,16 @@ export function DealsListClient() {
                   : " Stored in this browser until you sign in."}
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Link href="/team" className="btn-ghost">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
+          <Link href="/team" className="btn-ghost w-full sm:w-auto">
             Team
           </Link>
-          <Link href="/deals/find" className="btn-ghost">
+          <Link href="/deals/find" className="btn-ghost w-full sm:w-auto">
             Find deals
           </Link>
           <Link
             href={freeCreateUsed && !isPro ? "/pricing" : "/deals/new"}
-            className="btn-signal"
+            className="btn-signal w-full sm:w-auto"
           >
             New deal
           </Link>
@@ -295,8 +295,8 @@ export function DealsListClient() {
       </div>
 
       {!isPro ? (
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border border-line bg-stone/50 px-4 py-3 text-sm">
-          <p className="text-muted">
+        <div className="mt-8 flex flex-col gap-3 border border-line bg-stone/50 px-4 py-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <p className="min-w-0 text-muted">
             Free plan:{" "}
             {freeCreateUsed
               ? "1 free deal create used (deleting does not free a slot)"
@@ -385,13 +385,13 @@ export function DealsListClient() {
             return (
               <li
                 key={d.id}
-                className="group flex flex-wrap items-center justify-between gap-4 px-5 py-5 transition hover:bg-stone/40"
+                className="group flex flex-col gap-3 px-4 py-5 transition hover:bg-stone/40 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 sm:px-5"
               >
-                <div>
+                <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href={`/deals/${d.id}`}
-                      className="font-display text-2xl tracking-tight text-ink transition group-hover:text-canopy"
+                      className="break-words font-display text-xl tracking-tight text-ink transition group-hover:text-canopy sm:text-2xl"
                     >
                       {dealTitle(d)}
                     </Link>
@@ -410,17 +410,17 @@ export function DealsListClient() {
                     {d.property.city ? ` · ${d.property.city}` : ""}
                   </p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 sm:shrink-0">
                   <Link
                     href={`/deals/${d.id}`}
-                    className="text-sm font-semibold text-signal transition hover:text-brass-deep"
+                    className="inline-flex min-h-11 items-center text-sm font-semibold text-signal transition hover:text-brass-deep"
                   >
                     Open →
                   </Link>
                   {canDelete ? (
                     <button
                       type="button"
-                      className="text-sm text-muted transition hover:text-loss"
+                      className="inline-flex min-h-11 items-center text-sm text-muted transition hover:text-loss"
                       onClick={() => {
                         deleteDeal(d.id);
                         if (user && isPro) void deleteCloudDeal(d.id);

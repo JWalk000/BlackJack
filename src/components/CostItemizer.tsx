@@ -126,7 +126,7 @@ export function CostItemizer({
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
         <div>
           <p className="page-label">Itemized budget</p>
-          <p className="mt-2 font-display text-4xl tracking-tight text-ink">
+          <p className="mt-2 font-display text-3xl tracking-tight text-ink sm:text-4xl">
             {money(total)}
           </p>
           <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted">
@@ -159,12 +159,16 @@ export function CostItemizer({
                 }
                 onResetTemplate();
               }}
-              className="btn-ghost"
+              className="btn-ghost w-full sm:w-auto"
             >
               Reset cost template
             </button>
           ) : null}
-          <button type="button" onClick={add} className="btn-signal">
+          <button
+            type="button"
+            onClick={add}
+            className="btn-signal w-full sm:w-auto"
+          >
             Add line item
           </button>
         </div>

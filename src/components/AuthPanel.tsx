@@ -161,7 +161,7 @@ export function AuthPanel({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/45 px-4 backdrop-blur-sm print:hidden"
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-ink/45 px-0 backdrop-blur-sm print:hidden sm:items-center sm:px-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-title"
@@ -169,11 +169,11 @@ export function AuthPanel({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-md border border-line bg-paper p-6 shadow-xl sm:p-8">
+      <div className="max-h-[min(92dvh,100%)] w-full max-w-md overflow-y-auto overscroll-contain border border-line bg-paper p-5 shadow-xl sm:p-8 safe-pb">
         <div className="flex items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <p className="page-label">Account</p>
-            <h2 id="auth-title" className="page-title mt-2 text-3xl">
+            <h2 id="auth-title" className="page-title mt-2 text-2xl sm:text-3xl">
               {method === "phone"
                 ? "Phone sign-in"
                 : mode === "signin"
@@ -188,7 +188,7 @@ export function AuthPanel({
           <button
             type="button"
             onClick={onClose}
-            className="text-sm text-muted hover:text-ink"
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center text-sm text-muted hover:text-ink"
             aria-label="Close"
           >
             ✕
@@ -224,7 +224,7 @@ export function AuthPanel({
                     setOtpSent(false);
                     setOtp("");
                   }}
-                  className={`flex-1 px-3 py-2.5 text-sm font-semibold transition ${
+                  className={`min-h-11 flex-1 px-3 py-2.5 text-sm font-semibold transition ${
                     method === id
                       ? "bg-forest text-paper"
                       : "bg-surface text-muted hover:text-ink"
@@ -247,7 +247,7 @@ export function AuthPanel({
                     autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border border-line bg-surface px-3 py-2.5 text-ink outline-none focus:border-canopy"
+                    className="min-h-11 w-full border border-line bg-surface px-3 py-2.5 text-base text-ink outline-none focus:border-canopy sm:text-sm"
                   />
                 </label>
                 <label className="block">
@@ -263,7 +263,7 @@ export function AuthPanel({
                     }
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full border border-line bg-surface px-3 py-2.5 text-ink outline-none focus:border-canopy"
+                    className="min-h-11 w-full border border-line bg-surface px-3 py-2.5 text-base text-ink outline-none focus:border-canopy sm:text-sm"
                   />
                 </label>
                 {error ? (
@@ -326,7 +326,7 @@ export function AuthPanel({
                         setOtpSent(false);
                         setOtp("");
                       }}
-                      className="w-full border border-line bg-surface px-3 py-2.5 text-ink outline-none focus:border-canopy"
+                      className="min-h-11 w-full border border-line bg-surface px-3 py-2.5 text-base text-ink outline-none focus:border-canopy sm:text-sm"
                     />
                   </label>
                   {otpSent ? (
@@ -341,7 +341,7 @@ export function AuthPanel({
                         required
                         value={otp}
                         onChange={(e) => setOtp(e.target.value)}
-                        className="w-full border border-line bg-surface px-3 py-2.5 text-ink outline-none focus:border-canopy"
+                        className="min-h-11 w-full border border-line bg-surface px-3 py-2.5 text-base text-ink outline-none focus:border-canopy sm:text-sm"
                         placeholder="6-digit code"
                       />
                     </label>

@@ -24,6 +24,12 @@ export const metadata: Metadata = {
     "Build ground-up and rehab deals for residential and commercial real estate with full itemized costs and final numbers.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover" as const,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

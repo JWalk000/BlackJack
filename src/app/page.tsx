@@ -36,27 +36,27 @@ function PricingSticker({
   const href = isPro ? "/pricing" : "/team";
 
   return (
-    <div className="relative w-[min(100%,11.75rem)] shrink-0 pb-2 pt-1 sm:w-[12.75rem]">
+    <div className="relative w-[min(100%,10.5rem)] shrink-0 pb-2 pt-1 min-[380px]:w-[min(100%,11.75rem)] sm:w-[12.75rem]">
       <div
-        className={`sticker-pro relative z-10 px-3.5 pb-3.5 pt-5 sm:px-4 sm:pb-4 sm:pt-6 ${
+        className={`sticker-pro relative z-10 px-3 pb-3 pt-4 min-[380px]:px-3.5 min-[380px]:pb-3.5 min-[380px]:pt-5 sm:px-4 sm:pb-4 sm:pt-6 ${
           isPro ? "" : "sticker-team"
         }`}
       >
         <span className="sticker-tape" aria-hidden />
         <div className="relative z-[1]">
           <span className="sticker-badge">{label}</span>
-          <p className="mt-2 font-display text-[2.35rem] leading-[0.85] tracking-tight text-ink sm:text-[2.65rem]">
+          <p className="mt-2 font-display text-[2.1rem] leading-[0.85] tracking-tight text-ink min-[380px]:text-[2.35rem] sm:text-[2.65rem]">
             ${price}
             <span className="ml-0.5 align-baseline font-body text-xs font-semibold tracking-normal text-muted sm:text-sm">
               /mo
             </span>
           </p>
-          <p className="mt-1.5 border-t border-ink/10 pt-2 text-[11px] leading-snug text-ink/80">
+          <p className="mt-1.5 border-t border-ink/10 pt-2 text-[10px] leading-snug text-ink/80 min-[380px]:text-[11px]">
             {line}
           </p>
           <Link
             href={href}
-            className={`mt-3 inline-flex w-full items-center justify-center px-3 py-2 text-xs font-semibold shadow-[0_3px_0_0] shadow-ink/20 transition sm:text-sm ${
+            className={`mt-3 inline-flex min-h-11 w-full items-center justify-center px-3 py-2.5 text-xs font-semibold shadow-[0_3px_0_0] shadow-ink/20 transition sm:text-sm ${
               isPro
                 ? "bg-signal text-paper hover:bg-brass hover:text-ink hover:shadow-ink/10"
                 : "bg-forest text-paper hover:bg-canopy hover:shadow-ink/10"
@@ -98,41 +98,41 @@ export default function HomePage() {
           <div className="texture-grain absolute inset-0 opacity-40" />
         </div>
 
-        <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-5 pb-28 pt-28 sm:px-8 sm:pb-32 lg:justify-center lg:pb-24">
-          <div className="grid items-end gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)] lg:items-center lg:gap-8 xl:gap-10">
+        <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-5 pb-24 pt-24 sm:px-8 sm:pb-32 sm:pt-28 lg:justify-center lg:pb-24">
+          <div className="grid items-end gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)] lg:items-center lg:gap-8 xl:gap-10">
             <div className="min-w-0">
               <p className="animate-rise text-[11px] font-medium uppercase tracking-[0.32em] text-signal">
                 Build for the Future
               </p>
 
-              <h1 className="animate-rise-1 mt-3 font-display text-[clamp(4.5rem,18vw,10rem)] leading-[0.88] tracking-tight text-paper">
+              <h1 className="animate-rise-1 mt-3 font-display text-[clamp(3.75rem,16vw,10rem)] leading-[0.88] tracking-tight text-paper">
                 Estate
               </h1>
 
               <div className="animate-draw mt-5 h-1 w-28 origin-left bg-signal sm:w-36" />
 
-              <p className="animate-rise-2 mt-7 max-w-md text-lg leading-relaxed text-sand sm:text-xl">
+              <p className="animate-rise-2 mt-6 max-w-md text-base leading-relaxed text-sand sm:mt-7 sm:text-xl">
                 Ground-up or rehab. Residential or commercial. Every cost broken
                 down — then the returns pop.
               </p>
 
-              <div className="animate-rise-3 mt-10 flex flex-wrap items-center gap-3">
+              <div className="animate-rise-3 mt-8 flex w-full max-w-md flex-col gap-3 sm:mt-10 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center">
                 <Link
                   href="/deals/new"
-                  className="bg-signal px-7 py-3.5 text-sm font-semibold tracking-wide text-paper transition hover:bg-brass hover:text-ink"
+                  className="inline-flex min-h-12 w-full items-center justify-center bg-signal px-7 py-3.5 text-sm font-semibold tracking-wide text-paper transition hover:bg-brass hover:text-ink sm:w-auto"
                 >
                   Start a deal
                 </Link>
                 <Link
                   href="/deals"
-                  className="border border-paper/40 px-7 py-3.5 text-sm font-medium text-paper transition hover:border-paper hover:bg-paper/10"
+                  className="inline-flex min-h-12 w-full items-center justify-center border border-paper/40 px-7 py-3.5 text-sm font-medium text-paper transition hover:border-paper hover:bg-paper/10 sm:w-auto"
                 >
                   Open workspace
                 </Link>
               </div>
 
-              {/* Mobile / tablet: Pro + Team side by side under CTAs */}
-              <div className="animate-rise-3 mt-10 lg:hidden">
+              {/* Mobile / tablet: Pro + Team under CTAs */}
+              <div className="animate-rise-3 mt-8 lg:hidden">
                 <StickerStack />
               </div>
             </div>
@@ -224,18 +224,21 @@ export default function HomePage() {
               shares deals across five seats.
             </p>
           </div>
-          <div className="mt-12 flex flex-col items-start gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <Link href="/deals/new" className="btn-signal inline-flex items-center">
+          <div className="mt-12 flex flex-col items-stretch gap-4 sm:items-start">
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+              <Link
+                href="/deals/new"
+                className="btn-signal w-full sm:w-auto"
+              >
                 New deal
               </Link>
-              <Link href="/deals" className="btn-ghost inline-flex items-center">
+              <Link href="/deals" className="btn-ghost w-full sm:w-auto">
                 My deals
               </Link>
             </div>
             <Link
               href="/pricing"
-              className="text-sm font-medium text-muted transition hover:text-ink"
+              className="inline-flex min-h-11 items-center text-sm font-medium text-muted transition hover:text-ink"
             >
               See pricing →
             </Link>

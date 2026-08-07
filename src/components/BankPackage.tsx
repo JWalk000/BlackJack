@@ -103,15 +103,15 @@ export function BankPackage({ id }: { id: string }) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Link
               href={`/deals/${deal.id}`}
-              className="text-sm text-[#555] hover:text-[#111]"
+              className="inline-flex min-h-11 items-center text-sm text-[#555] hover:text-[#111]"
             >
               ← Back to deal
             </Link>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="bg-[#12352c] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1f5c48]"
+                className="min-h-11 bg-[#12352c] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1f5c48]"
               >
                 Download PDF for bank
               </button>
@@ -124,7 +124,7 @@ export function BankPackage({ id }: { id: string }) {
                     ? "Create a read-only share link"
                     : "Pro feature — upgrade to share online"
                 }
-                className="border border-[#12352c] bg-white px-5 py-2.5 text-sm font-semibold text-[#12352c] hover:bg-[#efe6d4] disabled:opacity-60"
+                className="min-h-11 border border-[#12352c] bg-white px-5 py-2.5 text-sm font-semibold text-[#12352c] hover:bg-[#efe6d4] disabled:opacity-60"
               >
                 {shareBusy
                   ? "Creating link…"

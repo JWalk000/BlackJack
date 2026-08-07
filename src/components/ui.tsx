@@ -261,11 +261,13 @@ export function Metric({
           : "border-line bg-stone text-ink";
 
   return (
-    <div className={`border px-4 py-3.5 ${toneClass}`}>
+    <div className={`min-w-0 border px-3 py-3 sm:px-4 sm:py-3.5 ${toneClass}`}>
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] opacity-75">
         {label}
       </p>
-      <p className="mt-1.5 font-display text-2xl tracking-tight">{value}</p>
+      <p className="mt-1.5 break-words font-display text-xl tracking-tight sm:text-2xl">
+        {value}
+      </p>
     </div>
   );
 }

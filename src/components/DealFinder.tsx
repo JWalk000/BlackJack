@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -89,6 +89,8 @@ export function DealFinder() {
     open: false,
     message: "",
   });
+  /** OSM iframe captures touch; require a tap before pan so page can scroll. */
+  const [mapInteractive, setMapInteractive] = useState(false);
 
   const allListings = useMemo(
     () => [...userListings, ...inventory],
@@ -108,6 +110,10 @@ export function DealFinder() {
 
   const selected =
     ranked.find((l) => l.id === selectedId) ?? ranked[0] ?? null;
+
+  useEffect(() => {
+    setMapInteractive(false);
+  }, [selected?.id]);
 
   const leadScore = useMemo(
     () =>
@@ -271,17 +277,17 @@ export function DealFinder() {
 
   return (
     <div className="relative mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
-      <div className="flex flex-wrap items-end justify-between gap-6">
-        <div>
+      <div className="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+        <div className="min-w-0">
           <p className="page-label">Screening</p>
-          <h1 className="page-title mt-2 text-4xl sm:text-5xl">Find deals</h1>
+          <h1 className="page-title mt-2 text-3xl sm:text-5xl">Find deals</h1>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted">
             Screen Houston-area homes and vacant land against public area
             averages from Zillow Research ZHVI and county assessor GIS. Paste
             your own lead anytime — not live MLS.
           </p>
         </div>
-        <Link href="/deals" className="btn-ghost">
+        <Link href="/deals" className="btn-ghost w-full shrink-0 sm:w-auto">
           My deals
         </Link>
       </div>
@@ -389,109 +395,17 @@ export function DealFinder() {
         </div>
       </div>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_minmax(280px,360px)]">
-        <div>
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="font-display text-2xl tracking-tight text-ink">
-              Ranked leads
-            </h2>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-              {ranked.length} shown
-            </p>
-          </div>
-
-          {ranked.length === 0 ? (
-            <div className="mt-4 border border-dashed border-line bg-stone/40 px-5 py-14 text-center">
-              <p className="font-display text-xl text-ink">No matches</p>
-              <p className="mt-2 text-sm text-muted">
-                Relax filters or paste a custom lead below.
-              </p>
-            </div>
-          ) : (
-            <ul className="mt-4 divide-y divide-line border border-line bg-surface">
-              {ranked.map((l) => {
-                const active = selected?.id === l.id;
-                const unit =
-                  l.type === "home"
-                    ? formatUnitPrice(l.score.listUnitPrice, "sf")
-                    : formatUnitPrice(l.score.listUnitPrice, "acre");
-                return (
-                  <li key={l.id}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedId(l.id)}
-                      className={`w-full px-4 py-4 text-left transition sm:px-5 ${
-                        active
-                          ? "bg-forest text-paper"
-                          : "hover:bg-stone/50"
-                      }`}
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <p
-                            className={`font-display text-lg tracking-tight sm:text-xl ${
-                              active ? "text-paper" : "text-ink"
-                            }`}
-                          >
-                            {l.title}
-                          </p>
-                          <p
-                            className={`mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${
-                              active ? "text-sand/80" : "text-muted"
-                            }`}
-                          >
-                            {l.type === "home" ? "Home" : "Land"} · {l.city},{" "}
-                            {l.county} County · {money(l.price)}
-                            {l.priceLabel ? ` · ${l.priceLabel}` : ""}
-                            {" · "}
-                            {sourceBadge(l)}
-                          </p>
-                        </div>
-                        <span
-                          className={`shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                            l.score.isGoodDeal
-                              ? active
-                                ? "text-brass"
-                                : "text-profit"
-                              : active
-                                ? "text-sand/70"
-                                : "text-muted"
-                          }`}
-                        >
-                          {l.score.isGoodDeal ? "Good deal" : "Below hurdle"}
-                        </span>
-                      </div>
-                      <div
-                        className={`mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm ${
-                          active ? "text-sand/90" : "text-muted"
-                        }`}
-                      >
-                        <span>{unit}</span>
-                        <span>{formatDiscount(l.score.discountVsArea)}</span>
-                        {l.score.areaUnitPrice != null ? (
-                          <span>
-                            Area{" "}
-                            {formatUnitPrice(
-                              l.score.areaUnitPrice,
-                              l.type === "home" ? "sf" : "acre",
-                            )}
-                          </span>
-                        ) : null}
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-
-        <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_minmax(280px,360px)] lg:items-start">
+        {/*
+          Mobile: selected + map first so users reach the full embed without
+          fighting a long lead list. Desktop: list left, sticky detail right.
+        */}
+        <aside className="order-1 min-w-0 space-y-5 lg:order-2 lg:sticky lg:top-24 lg:z-10 lg:max-h-[calc(100dvh-6.5rem)] lg:self-start lg:overflow-y-auto lg:overscroll-contain">
           {selected ? (
             <div className="border border-line bg-surface">
               <div className="border-b border-line px-4 py-4">
                 <p className="page-label">Selected</p>
-                <h3 className="mt-1 font-display text-xl tracking-tight text-ink">
+                <h3 className="mt-1 break-words font-display text-xl tracking-tight text-ink">
                   {selected.title}
                 </h3>
                 <p className="mt-1 text-sm text-muted">
@@ -571,14 +485,34 @@ export function DealFinder() {
                 ) : null}
               </p>
 
-              <div className="relative aspect-[4/3] w-full bg-stone">
+              {/*
+                Explicit height (not aspect + absolute iframe). Avoids clipped
+                maps when ancestors use overflow/sticky containment. Tap-to-pan
+                so the OSM iframe does not trap page scroll until the user
+                deliberately activates it.
+              */}
+              <div
+                className={`finder-map bg-stone${mapInteractive ? " is-active" : ""}`}
+              >
                 <iframe
+                  key={`${selected.id}-${selected.lat}-${selected.lng}`}
                   title={`Map of ${selected.title}`}
-                  className="absolute inset-0 h-full w-full border-0"
+                  className="finder-map__frame"
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
                   src={osmEmbedUrl(selected.lat, selected.lng)}
                 />
+                {!mapInteractive ? (
+                  <button
+                    type="button"
+                    className="finder-map__activate"
+                    onClick={() => setMapInteractive(true)}
+                    aria-label="Activate map to pan and zoom"
+                  >
+                    <span>Tap map to pan</span>
+                  </button>
+                ) : null}
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-2 text-[11px] text-muted">
                 <span>
@@ -588,9 +522,9 @@ export function DealFinder() {
                   href={osmBrowseUrl(selected.lat, selected.lng)}
                   target="_blank"
                   rel="noreferrer"
-                  className="font-semibold text-signal hover:text-brass-deep"
+                  className="inline-flex min-h-10 items-center font-semibold text-signal hover:text-brass-deep"
                 >
-                  Open map →
+                  Open full map →
                 </a>
               </div>
 
@@ -624,11 +558,14 @@ export function DealFinder() {
                     <button
                       type="button"
                       onClick={() => setSelectedId(l.id)}
-                      className="w-full text-left text-muted transition hover:text-signal"
+                      className="flex min-h-10 w-full items-center text-left text-muted transition hover:text-signal"
                     >
-                      <span className="text-signal">◆</span> {l.city}{" "}
-                      <span className="text-xs">
-                        ({l.lat.toFixed(2)}, {l.lng.toFixed(2)})
+                      <span className="text-signal">◆</span>
+                      <span className="ml-1.5 min-w-0">
+                        {l.city}{" "}
+                        <span className="text-xs">
+                          ({l.lat.toFixed(2)}, {l.lng.toFixed(2)})
+                        </span>
                       </span>
                     </button>
                   </li>
@@ -637,6 +574,102 @@ export function DealFinder() {
             </div>
           ) : null}
         </aside>
+
+        <div className="order-2 min-w-0 lg:order-1">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="font-display text-2xl tracking-tight text-ink">
+              Ranked leads
+            </h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+              {ranked.length} shown
+            </p>
+          </div>
+
+          {ranked.length === 0 ? (
+            <div className="mt-4 border border-dashed border-line bg-stone/40 px-5 py-14 text-center">
+              <p className="font-display text-xl text-ink">No matches</p>
+              <p className="mt-2 text-sm text-muted">
+                Relax filters or paste a custom lead below.
+              </p>
+            </div>
+          ) : (
+            <ul className="mt-4 divide-y divide-line border border-line bg-surface">
+              {ranked.map((l) => {
+                const active = selected?.id === l.id;
+                const unit =
+                  l.type === "home"
+                    ? formatUnitPrice(l.score.listUnitPrice, "sf")
+                    : formatUnitPrice(l.score.listUnitPrice, "acre");
+                return (
+                  <li key={l.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(l.id)}
+                      className={`w-full px-4 py-4 text-left transition sm:px-5 ${
+                        active
+                          ? "bg-forest text-paper"
+                          : "hover:bg-stone/50"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p
+                            className={`break-words font-display text-lg tracking-tight sm:text-xl ${
+                              active ? "text-paper" : "text-ink"
+                            }`}
+                          >
+                            {l.title}
+                          </p>
+                          <p
+                            className={`mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${
+                              active ? "text-sand/80" : "text-muted"
+                            }`}
+                          >
+                            {l.type === "home" ? "Home" : "Land"} · {l.city},{" "}
+                            {l.county} County · {money(l.price)}
+                            {l.priceLabel ? ` · ${l.priceLabel}` : ""}
+                            {" · "}
+                            {sourceBadge(l)}
+                          </p>
+                        </div>
+                        <span
+                          className={`shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                            l.score.isGoodDeal
+                              ? active
+                                ? "text-brass"
+                                : "text-profit"
+                              : active
+                                ? "text-sand/70"
+                                : "text-muted"
+                          }`}
+                        >
+                          {l.score.isGoodDeal ? "Good deal" : "Below hurdle"}
+                        </span>
+                      </div>
+                      <div
+                        className={`mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm ${
+                          active ? "text-sand/90" : "text-muted"
+                        }`}
+                      >
+                        <span>{unit}</span>
+                        <span>{formatDiscount(l.score.discountVsArea)}</span>
+                        {l.score.areaUnitPrice != null ? (
+                          <span>
+                            Area{" "}
+                            {formatUnitPrice(
+                              l.score.areaUnitPrice,
+                              l.type === "home" ? "sf" : "acre",
+                            )}
+                          </span>
+                        ) : null}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </div>
 
       <section className="mt-14 border border-line bg-surface">

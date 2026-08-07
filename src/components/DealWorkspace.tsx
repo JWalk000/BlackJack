@@ -102,6 +102,7 @@ export function DealWorkspace({
 
   return (
     <div
+      className="min-w-0"
       onBlur={(e) => {
         const next = e.relatedTarget as Node | null;
         if (next && e.currentTarget.contains(next)) return;
@@ -109,14 +110,14 @@ export function DealWorkspace({
       }}
     >
       <div className="flex flex-col gap-5 border-b border-line pb-8 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="page-label">
             {deal.buildMode === "new_build" ? "Ground-up" : "Rehab"}
             {" · "}
             {deal.propertyClass}
             {deal.teamId ? " · Team deal" : ""}
           </p>
-          <h1 className="page-title mt-2 text-3xl sm:text-5xl">
+          <h1 className="page-title mt-2 break-words text-3xl sm:text-5xl">
             {deal.property.name.trim() ||
               deal.property.address.trim() ||
               "Untitled deal"}
@@ -124,10 +125,10 @@ export function DealWorkspace({
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {teamContext ? (
-            <label className="flex cursor-pointer items-center gap-2 border border-line bg-stone/40 px-3 py-2 text-sm">
+            <label className="flex min-h-11 w-full cursor-pointer items-center gap-2 border border-line bg-stone/40 px-3 py-2 text-sm sm:w-auto">
               <input
                 type="checkbox"
-                className="accent-[var(--forest)]"
+                className="size-4 accent-[var(--forest)]"
                 checked={deal.teamId === teamContext.teamId}
                 onChange={(e) => {
                   onChange({
@@ -143,7 +144,7 @@ export function DealWorkspace({
           ) : (
             <Link
               href="/team"
-              className="text-sm font-medium text-muted transition hover:text-signal"
+              className="inline-flex min-h-11 items-center text-sm font-medium text-muted transition hover:text-signal"
             >
               Team sharing
             </Link>
@@ -161,13 +162,13 @@ export function DealWorkspace({
               Saved locally
             </span>
           ) : null}
-          <button type="button" onClick={onSave} className="btn-signal">
+          <button type="button" onClick={onSave} className="btn-signal w-full sm:w-auto">
             Save deal
           </button>
         </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-1 border-b border-line">
+      <div className="studio-tabs mt-6 flex gap-0 overflow-x-auto overscroll-x-contain border-b border-line [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -175,13 +176,20 @@ export function DealWorkspace({
             onClick={() => {
               goTab(t.id);
             }}
-            className={`border-b-2 px-4 py-3.5 text-sm font-medium tracking-wide transition ${
+            className={`shrink-0 border-b-2 px-3 py-3.5 text-sm font-medium tracking-wide transition sm:px-4 ${
               tab === t.id
                 ? "border-signal text-ink"
                 : "border-transparent text-muted hover:text-ink"
             }`}
           >
-            {t.label}
+            <span className="sm:hidden">
+              {t.id === "property"
+                ? "Property"
+                : t.id === "costs"
+                  ? "Costs"
+                  : "Numbers"}
+            </span>
+            <span className="hidden sm:inline">{t.label}</span>
           </button>
         ))}
       </div>
@@ -437,10 +445,10 @@ export function DealWorkspace({
                 </div>
               </section>
             </div>
-            <div className="flex justify-end border-t border-line pt-6">
+            <div className="flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:justify-end">
               <button
                 type="button"
-                className="btn-signal"
+                className="btn-signal w-full sm:w-auto"
                 onClick={() => goTab("costs")}
               >
                 Next: Itemized costs
@@ -458,17 +466,17 @@ export function DealWorkspace({
               propertyClass={deal.propertyClass}
               buildMode={deal.buildMode}
             />
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-6">
+            <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-line pt-6 sm:flex-row sm:flex-wrap sm:items-center">
               <button
                 type="button"
-                className="btn-forest"
+                className="btn-forest w-full sm:w-auto"
                 onClick={() => goTab("property")}
               >
                 Previous: Property
               </button>
               <button
                 type="button"
-                className="btn-signal"
+                className="btn-signal w-full sm:w-auto"
                 onClick={() => goTab("analysis")}
               >
                 Next: Final numbers
@@ -491,16 +499,16 @@ export function DealWorkspace({
                   lender.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                 <a
                   href={`/deals/${deal.id}/package`}
-                  className="btn-signal"
+                  className="btn-signal w-full sm:w-auto"
                 >
                   Open bank package
                 </a>
                 <a
                   href={`/deals/${deal.id}/package`}
-                  className="btn-ghost"
+                  className="btn-ghost w-full sm:w-auto"
                   title="Print or share from the package page"
                 >
                   Print / share
@@ -556,11 +564,11 @@ export function DealWorkspace({
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
                   Build budget roll-up
                 </p>
-                <div className="flex items-center justify-between border border-signal/25 bg-signal/10 px-4 py-3.5">
-                  <span className="text-sm text-muted">
+                <div className="flex min-w-0 items-center justify-between gap-3 border border-signal/25 bg-signal/10 px-4 py-3.5">
+                  <span className="shrink-0 text-sm text-muted">
                     From itemized costs
                   </span>
-                  <span className="font-display text-2xl tracking-tight text-ink">
+                  <span className="min-w-0 break-all text-right font-display text-xl tracking-tight text-ink sm:text-2xl">
                     {money(result.buildBudget)}
                   </span>
                 </div>
@@ -886,15 +894,15 @@ export function DealWorkspace({
               )}
             </section>
           </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-6">
+            <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-line pt-6 sm:flex-row sm:flex-wrap sm:items-center">
               <button
                 type="button"
-                className="btn-forest"
+                className="btn-forest w-full sm:w-auto"
                 onClick={() => goTab("costs")}
               >
                 Previous: Itemized costs
               </button>
-              <a href={`/deals/${deal.id}/package`} className="btn-signal">
+              <a href={`/deals/${deal.id}/package`} className="btn-signal w-full sm:w-auto">
                 Open bank package
               </a>
             </div>
