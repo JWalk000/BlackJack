@@ -119,7 +119,7 @@ export default function HomePage() {
               <div className="animate-rise-3 mt-6 flex w-full max-w-md flex-col items-stretch gap-2.5 sm:mt-7 sm:max-w-none sm:items-start">
                 <Link
                   href="/deals/new"
-                  className="inline-flex min-h-14 w-full items-center justify-center bg-signal px-8 py-4 text-base font-semibold tracking-wide text-paper transition hover:bg-brass hover:text-ink sm:w-auto sm:min-h-[3.75rem] sm:px-10 sm:text-lg"
+                  className="inline-flex min-h-16 w-full items-center justify-center bg-signal px-10 py-5 text-lg font-semibold tracking-wide text-paper transition hover:bg-brass hover:text-ink sm:w-auto sm:min-h-[4.25rem] sm:px-12 sm:py-6 sm:text-xl"
                 >
                   Develop the numbers
                 </Link>
