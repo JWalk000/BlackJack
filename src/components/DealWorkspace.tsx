@@ -417,53 +417,6 @@ export function DealWorkspace({
                     </>
                   )}
                 </div>
-
-                <div className="border-t border-line pt-6">
-                  <p className="page-label">Records</p>
-                  <h2 className="mt-2 font-display text-2xl tracking-tight text-ink">
-                    Snapshot
-                  </h2>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Last sale amount">
-                    <MoneyInput
-                      value={deal.property.lastSaleAmount ?? 0}
-                      onChange={(lastSaleAmount) =>
-                        patchProperty({
-                          lastSaleAmount: lastSaleAmount || null,
-                        })
-                      }
-                    />
-                  </Field>
-                  <Field label="Last sale date">
-                    <input
-                      type="date"
-                      className={inputClass}
-                      value={deal.property.lastSaleDate}
-                      onChange={(e) =>
-                        patchProperty({ lastSaleDate: e.target.value })
-                      }
-                    />
-                  </Field>
-                  <Field label="Tax assessment">
-                    <MoneyInput
-                      value={deal.property.taxAssessment ?? 0}
-                      onChange={(taxAssessment) =>
-                        patchProperty({
-                          taxAssessment: taxAssessment || null,
-                        })
-                      }
-                    />
-                  </Field>
-                  <Field label="Annual tax">
-                    <MoneyInput
-                      value={deal.property.taxAmount ?? 0}
-                      onChange={(taxAmount) =>
-                        patchProperty({ taxAmount: taxAmount || null })
-                      }
-                    />
-                  </Field>
-                </div>
               </section>
             </div>
             <div className="flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:justify-end">
