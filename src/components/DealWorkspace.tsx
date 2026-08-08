@@ -532,33 +532,29 @@ export function DealWorkspace({
               <div>
                 <p className="page-label">Assumptions</p>
                 <h2 className="mt-2 font-display text-2xl tracking-tight text-ink sm:text-3xl">
-                  Purchase, timeline, financing
+                  Exit value, timeline, financing
                 </h2>
               </div>
 
               <div className="space-y-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                  Purchase
+                  Exit value
                 </p>
-                <Field label="Purchase price">
+                <Field
+                  label={
+                    deal.exitStrategy === "flip"
+                      ? "After-repair / exit value (ARV)"
+                      : "Stabilized value (ARV)"
+                  }
+                >
                   <MoneyInput
-                    value={deal.assumptions.purchasePrice}
-                    onChange={(purchasePrice) => {
-                      const next: Partial<typeof deal.assumptions> = {
-                        purchasePrice,
-                      };
-                      if (!deal.assumptions.closingCostsManual) {
-                        next.closingCosts = Math.round(
-                          (purchasePrice || 0) * 0.04,
-                        );
-                      }
-                      patchAssumptions(next);
-                    }}
+                    value={deal.assumptions.arv}
+                    onChange={(arv) => patchAssumptions({ arv })}
                   />
                 </Field>
                 <Field
                   label="Closing costs"
-                  hint="Defaults to 4% of purchase — edit anytime"
+                  hint="Fees at acquire/close — edit anytime (exclude if already in costs)"
                 >
                   <MoneyInput
                     value={deal.assumptions.closingCosts}
@@ -654,24 +650,6 @@ export function DealWorkspace({
                     </Field>
                   </div>
                 ) : null}
-              </div>
-
-              <div className="space-y-4 border-t border-line pt-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                  Exit value
-                </p>
-                <Field
-                  label={
-                    deal.exitStrategy === "flip"
-                      ? "After-repair / exit value (ARV)"
-                      : "Stabilized value (ARV)"
-                  }
-                >
-                  <MoneyInput
-                    value={deal.assumptions.arv}
-                    onChange={(arv) => patchAssumptions({ arv })}
-                  />
-                </Field>
               </div>
             </section>
 
