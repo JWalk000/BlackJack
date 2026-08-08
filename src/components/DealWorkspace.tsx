@@ -56,10 +56,6 @@ export function DealWorkspace({
     buildingSf && deal.assumptions.arv > 0
       ? deal.assumptions.arv / buildingSf
       : null;
-  const allInPsf = buildingSf ? result.totalAllIn / buildingSf : null;
-  const netProceedsPsf = buildingSf
-    ? result.netSaleProceeds / buildingSf
-    : null;
   const formatPsf = (n: number | null) =>
     n != null && Number.isFinite(n)
       ? `$${Math.round(n).toLocaleString("en-US")}/sf`
@@ -751,27 +747,6 @@ export function DealWorkspace({
                       tone="accent"
                     />
                     <Metric
-                      label="All-in $/sf"
-                      value={formatPsf(allInPsf)}
-                    />
-                    <Metric
-                      label="Net proceeds $/sf"
-                      value={formatPsf(netProceedsPsf)}
-                    />
-                  </div>
-                  {!buildingSf ? (
-                    <p className="text-xs text-muted">
-                      Set building square feet on the Property tab to calculate
-                      $/sf from exit value and costs.
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted">
-                      Based on {buildingSf.toLocaleString("en-US")} building sf
-                      (Property) × exit value / all-in / net proceeds.
-                    </p>
-                  )}
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Metric
                       label="Cost of sale"
                       value={money(result.costOfSale)}
                     />
@@ -780,6 +755,18 @@ export function DealWorkspace({
                       value={money(result.netSaleProceeds)}
                     />
                   </div>
+                  {!buildingSf ? (
+                    <p className="text-xs text-muted">
+                      Set building square feet on the Property tab to calculate
+                      exit $/sf.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted">
+                      Exit $/sf = exit value ÷{" "}
+                      {buildingSf.toLocaleString("en-US")} building sf
+                      (Property).
+                    </p>
+                  )}
                   <div className="grid gap-3 sm:grid-cols-3">
                     <Metric
                       label="Projected profit"
