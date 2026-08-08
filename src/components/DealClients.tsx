@@ -26,9 +26,11 @@ import {
   upsertCloudDeal,
 } from "@/lib/cloud-deals";
 import { claimTeamInvites, fetchMyTeam, type MyTeam } from "@/lib/teams";
+import { downloadDealExcel } from "@/lib/deal-excel";
 import { DealWorkspace } from "./DealWorkspace";
 import { AuthPanel } from "./AuthPanel";
 import { BillingToast, type BillingToastState } from "./BillingToast";
+import { DealExcelButtons } from "./DealExcelButtons";
 
 const AUTO_SAVE_MS = 500;
 
@@ -191,6 +193,7 @@ export function NewDealClient() {
 }
 
 export function DealsListClient() {
+  const router = useRouter();
   const { cloudReady, user, loading: authLoading } = useAuth();
   const { isPro, freeMode, freeDealsCreated } = useBilling();
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -313,6 +316,15 @@ export function DealsListClient() {
           >
             New deal
           </Link>
+          <DealExcelButtons
+            onImported={(d) => {
+              setDeals((prev) => {
+                const others = prev.filter((x) => x.id !== d.id);
+                return [d, ...others];
+              });
+              router.push(`/deals/${d.id}`);
+            }}
+          />
         </div>
       </div>
 
@@ -435,6 +447,13 @@ export function DealsListClient() {
                   </p>
                 </div>
                 <div className="flex items-center gap-4 sm:shrink-0">
+                  <button
+                    type="button"
+                    className="inline-flex min-h-11 items-center text-sm font-semibold text-muted transition hover:text-ink"
+                    onClick={() => downloadDealExcel(d)}
+                  >
+                    Excel
+                  </button>
                   <Link
                     href={`/deals/${d.id}`}
                     className="inline-flex min-h-11 items-center text-sm font-semibold text-signal transition hover:text-brass-deep"

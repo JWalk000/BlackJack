@@ -25,6 +25,23 @@ function groupCosts(items: CostItem[]) {
   }));
 }
 
+function SnapshotCell({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex justify-between gap-3 border-b border-[#e8e4dc] px-3 py-2.5 last:border-b-0 sm:block sm:border-b-0 sm:border-r sm:border-[#e8e4dc] sm:last:border-r-0">
+      <dt className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#666]">
+        {label}
+      </dt>
+      <dd className="text-sm font-medium text-[#111] sm:mt-0.5">{value}</dd>
+    </div>
+  );
+}
+
 export function PackageDocument({
   deal,
   shared,
@@ -38,11 +55,10 @@ export function PackageDocument({
   const result = underwrite(deal);
   const groups = groupCosts(deal.costItems);
   const title = dealTitle(deal);
+  const p = deal.property;
   const addressLine = [
-    deal.property.address,
-    [deal.property.city, deal.property.state, deal.property.zip]
-      .filter(Boolean)
-      .join(", "),
+    p.address,
+    [p.city, p.state, p.zip].filter(Boolean).join(", "),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -60,9 +76,17 @@ export function PackageDocument({
   const classLabel =
     deal.propertyClass === "commercial" ? "Commercial" : "Residential";
 
+  const baths =
+    p.bathsFull != null
+      ? p.bathsHalf
+        ? `${p.bathsFull} / ${p.bathsHalf}`
+        : String(p.bathsFull)
+      : "—";
+
   return (
     <article className="package-sheet mx-auto max-w-[8.5in] px-5 py-8 sm:px-8 sm:py-10 print:max-w-none print:px-0 print:py-0">
-      <header className="border-b-2 border-[#111] pb-4">
+      {/* Cover / identity */}
+      <header className="package-break-avoid border-b-2 border-[#111] pb-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="font-display text-3xl tracking-tight text-[#111]">
@@ -73,87 +97,127 @@ export function PackageDocument({
             </p>
           </div>
           <div className="text-right text-sm text-[#444]">
-            <p>Prepared {printed}</p>
+            <p className="font-medium text-[#111]">Prepared {printed}</p>
             <p className="mt-0.5 text-xs">
               {shared ? "Shared for lending review" : "For lending review"}
             </p>
+            <p className="mt-2 inline-block border border-[#111] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]">
+              Confidential
+            </p>
           </div>
         </div>
+
+        <div className="mt-6">
+          <h1 className="font-display text-[1.75rem] leading-tight tracking-tight text-[#111] sm:text-3xl">
+            {title}
+          </h1>
+          {addressLine ? (
+            <p className="mt-2 text-base text-[#333]">{addressLine}</p>
+          ) : (
+            <p className="mt-2 text-sm italic text-[#777]">
+              Address not set — complete property identity before submitting.
+            </p>
+          )}
+        </div>
+
+        <dl className="mt-5 grid border border-[#ccc] bg-white sm:grid-cols-4">
+          <SnapshotCell label="Project type" value={buildLabel} />
+          <SnapshotCell label="Asset class" value={classLabel} />
+          <SnapshotCell
+            label="Product"
+            value={p.propertyType || "—"}
+          />
+          <SnapshotCell
+            label="Exit strategy"
+            value={deal.exitStrategy === "flip" ? "Sell" : "Hold / rent"}
+          />
+        </dl>
       </header>
 
-      <section className="mt-6">
-        <h1 className="font-display text-3xl leading-tight tracking-tight text-[#111]">
-          {title}
-        </h1>
-        {addressLine ? (
-          <p className="mt-2 text-base text-[#333]">{addressLine}</p>
-        ) : null}
-        <dl className="mt-4 grid gap-2 border border-[#ccc] bg-white p-4 text-sm sm:grid-cols-2">
-          <div className="flex justify-between gap-4 sm:block">
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#666]">
-              Project type
-            </dt>
-            <dd className="font-medium">{buildLabel}</dd>
-          </div>
-          <div className="flex justify-between gap-4 sm:block">
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#666]">
-              Asset class
-            </dt>
-            <dd className="font-medium">{classLabel}</dd>
-          </div>
-          <div className="flex justify-between gap-4 sm:block">
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#666]">
-              Product
-            </dt>
-            <dd className="font-medium">
-              {deal.property.propertyType || "—"}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-4 sm:block">
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#666]">
-              Exit strategy
-            </dt>
-            <dd className="font-medium">
-              {deal.exitStrategy === "flip" ? "Sell" : "Hold / rent"}
-            </dd>
-          </div>
-          {deal.property.apn ? (
-            <div className="flex justify-between gap-4 sm:col-span-2 sm:block">
-              <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#666]">
-                APN
-              </dt>
-              <dd className="font-medium">{deal.property.apn}</dd>
-            </div>
+      {/* Property snapshot for lenders */}
+      <section className="package-break-avoid mt-6">
+        <h2 className="border-b border-[#111] pb-1 font-display text-xl text-[#111]">
+          Property snapshot
+        </h2>
+        <dl className="mt-3 grid border border-[#ccc] bg-white sm:grid-cols-3">
+          <SnapshotCell
+            label="Building SF"
+            value={
+              p.buildingSf != null ? p.buildingSf.toLocaleString() : "—"
+            }
+          />
+          <SnapshotCell
+            label="Lot SF"
+            value={p.lotSf != null ? p.lotSf.toLocaleString() : "—"}
+          />
+          <SnapshotCell
+            label="Year built"
+            value={p.yearBuilt != null ? String(p.yearBuilt) : "—"}
+          />
+          {deal.propertyClass === "residential" ? (
+            <>
+              <SnapshotCell
+                label="Bedrooms"
+                value={p.bedrooms != null ? String(p.bedrooms) : "—"}
+              />
+              <SnapshotCell label="Full baths" value={baths} />
+              <SnapshotCell
+                label="Units"
+                value={p.units != null ? String(p.units) : "—"}
+              />
+            </>
+          ) : (
+            <>
+              <SnapshotCell
+                label="Floors"
+                value={p.floors != null ? String(p.floors) : "—"}
+              />
+              <SnapshotCell label="Zoning" value={p.zoning || "—"} />
+              <SnapshotCell
+                label="Units"
+                value={p.units != null ? String(p.units) : "—"}
+              />
+            </>
+          )}
+          <SnapshotCell
+            label="Tax assessment"
+            value={
+              p.taxAssessment != null && p.taxAssessment > 0
+                ? money(p.taxAssessment)
+                : "—"
+            }
+          />
+          <SnapshotCell
+            label="Annual tax"
+            value={
+              p.taxAmount != null && p.taxAmount > 0
+                ? money(p.taxAmount)
+                : "—"
+            }
+          />
+          <SnapshotCell label="APN / account" value={p.apn || "—"} />
+          {p.condition ? (
+            <SnapshotCell label="Condition" value={p.condition} />
           ) : null}
-          {deal.property.buildingSf ? (
-            <div className="flex justify-between gap-4 sm:block">
-              <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#666]">
-                Building SF
-              </dt>
-              <dd className="font-medium">
-                {deal.property.buildingSf.toLocaleString()}
-              </dd>
-            </div>
-          ) : null}
-          {deal.property.units != null ? (
-            <div className="flex justify-between gap-4 sm:block">
-              <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#666]">
-                Units
-              </dt>
-              <dd className="font-medium">{deal.property.units}</dd>
-            </div>
+          {p.lastSaleAmount != null && p.lastSaleAmount > 0 ? (
+            <SnapshotCell
+              label="Last sale"
+              value={`${money(p.lastSaleAmount)}${
+                p.lastSaleDate ? ` · ${p.lastSaleDate}` : ""
+              }`}
+            />
           ) : null}
         </dl>
-        {deal.property.description ? (
+        {p.description ? (
           <p className="mt-3 text-sm leading-relaxed text-[#444]">
-            {deal.property.description}
+            {p.description}
           </p>
         ) : null}
       </section>
 
-      <section className="mt-8 break-inside-avoid">
+      <section className="package-break-avoid mt-8">
         <h2 className="border-b border-[#111] pb-1 font-display text-xl text-[#111]">
-          Final numbers
+          Final numbers at a glance
         </h2>
         <div className="mt-3 grid grid-cols-2 gap-px border border-[#ccc] bg-[#ccc] sm:grid-cols-4">
           {[
@@ -183,7 +247,7 @@ export function PackageDocument({
         </div>
       </section>
 
-      <section className="mt-8 break-inside-avoid">
+      <section className="package-break-avoid mt-8">
         <h2 className="border-b border-[#111] pb-1 font-display text-xl text-[#111]">
           Purchase &amp; financing
         </h2>
@@ -248,7 +312,7 @@ export function PackageDocument({
       </section>
 
       <section className="mt-8">
-        <h2 className="border-b border-[#111] pb-1 font-display text-xl text-[#111]">
+        <h2 className="package-break-avoid border-b border-[#111] pb-1 font-display text-xl text-[#111]">
           Itemized cost breakdown
         </h2>
         <p className="mt-2 text-xs text-[#555]">
@@ -257,7 +321,7 @@ export function PackageDocument({
         </p>
 
         {groups.map((g) => (
-          <div key={g.category} className="mt-5 break-inside-avoid">
+          <div key={g.category} className="package-break-avoid mt-5">
             <h3 className="flex items-baseline justify-between gap-4 border-b border-[#999] pb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#333]">
               <span>{g.category}</span>
               <span className="normal-case tracking-normal">
@@ -286,7 +350,7 @@ export function PackageDocument({
           </div>
         ))}
 
-        <div className="mt-4 flex items-center justify-between border-t-2 border-[#111] pt-3">
+        <div className="package-break-avoid mt-4 flex items-center justify-between border-t-2 border-[#111] pt-3">
           <span className="text-sm font-semibold uppercase tracking-[0.12em]">
             Total itemized budget
           </span>
@@ -294,7 +358,7 @@ export function PackageDocument({
         </div>
       </section>
 
-      <section className="mt-8 break-inside-avoid">
+      <section className="package-break-avoid mt-8">
         <h2 className="border-b border-[#111] pb-1 font-display text-xl text-[#111]">
           {deal.exitStrategy === "flip"
             ? "Sell economics"
@@ -345,13 +409,20 @@ export function PackageDocument({
         )}
       </section>
 
-      <footer className="mt-10 border-t border-[#ccc] pt-4 text-[11px] leading-relaxed text-[#666]">
-        <p>
-          Generated by Estate · not an MLS listing, appraisal, or lending
-          commitment. Figures are projections from sponsor inputs. Verify market
-          data, insurance, title, and as-complete value independently.
+      <footer className="package-break-avoid mt-10 border-t border-[#ccc] pt-4 text-[11px] leading-relaxed text-[#666]">
+        <p className="font-semibold uppercase tracking-[0.1em] text-[#444]">
+          Disclaimer
         </p>
-        <p className="mt-2">Estate · Confidential{shared ? " · Read-only share" : ""}</p>
+        <p className="mt-2">
+          Generated by Estate · not an MLS listing, appraisal, or lending
+          commitment. Figures are projections from sponsor inputs. Tax and CAD
+          values when shown are assessor figures, not market list prices. Verify
+          market comps, insurance, title, surveys, and as-complete value
+          independently before capital decisions.
+        </p>
+        <p className="mt-2">
+          Estate · Confidential{shared ? " · Read-only share" : ""}
+        </p>
       </footer>
     </article>
   );

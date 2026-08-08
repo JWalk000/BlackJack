@@ -571,10 +571,19 @@
 
   .package-sheet {
     max-width: none !important;
-    padding: 0.4in 0.5in !important;
+    padding: 0.45in 0.55in !important;
+  }
+
+  .package-break-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   a[href]::after {
     content: none !important;
   }
+}
+
+.package-break-avoid {
+  break-inside: avoid;
 }

@@ -7,6 +7,9 @@ import { DEFAULT_PROPERTY_TYPES } from "@/lib/types";
 import { costsAreBlank, templateCostItems } from "@/lib/deals";
 import { money, pct, underwrite } from "@/lib/underwriting";
 import { CostItemizer } from "./CostItemizer";
+import { AddressLookup } from "./AddressLookup";
+import { MarketCompsPanel } from "./MarketCompsPanel";
+import { DealExcelButtons } from "./DealExcelButtons";
 import {
   Field,
   MoneyInput,
@@ -162,6 +165,12 @@ export function DealWorkspace({
               Saved locally
             </span>
           ) : null}
+          <DealExcelButtons
+            deal={deal}
+            replaceId={deal.id}
+            onImported={(next) => onChange(next)}
+            compact
+          />
           <button type="button" onClick={onSave} className="btn-signal w-full sm:w-auto">
             Save deal
           </button>
@@ -253,13 +262,11 @@ export function DealWorkspace({
                     </select>
                   </Field>
                 </div>
-                <Field label="Street address">
-                  <input
-                    className={inputClass}
-                    value={deal.property.address}
-                    onChange={(e) => patchProperty({ address: e.target.value })}
-                  />
-                </Field>
+                <AddressLookup
+                  property={deal.property}
+                  onStreetChange={(address) => patchProperty({ address })}
+                  onApply={(patch) => patchProperty(patch)}
+                />
                 <div className="grid gap-4 sm:grid-cols-3">
                   <Field label="City">
                     <input
@@ -515,6 +522,9 @@ export function DealWorkspace({
                 </a>
               </div>
             </div>
+
+            <MarketCompsPanel deal={deal} />
+
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
             <section className="panel space-y-6 p-5 sm:p-7">
               <div>
