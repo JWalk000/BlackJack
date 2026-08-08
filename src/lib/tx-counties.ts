@@ -1,4 +1,6 @@
-/** Houston-metro city → county helpers (free CAD + ZHVI default). */
+/**
+ * TX city → county guesses for free comps (Houston metro + common suburbs).
+ */
 
 const CITY_COUNTY: Record<string, string> = {
   houston: "Harris",
@@ -8,18 +10,14 @@ const CITY_COUNTY: Record<string, string> = {
   "west u": "Harris",
   spring: "Harris",
   cypress: "Harris",
-  kite: "Harris",
-  kate: "Harris",
-  kaly: "Harris",
   katy: "Harris",
   humble: "Harris",
   baytown: "Harris",
   "jersey village": "Harris",
   tomball: "Harris",
   alief: "Harris",
-  sugarland: "Fort Bend",
   "sugar land": "Fort Bend",
-  missouri: "Fort Bend",
+  sugarland: "Fort Bend",
   "missouri city": "Fort Bend",
   stafford: "Fort Bend",
   richmond: "Fort Bend",
@@ -29,7 +27,6 @@ const CITY_COUNTY: Record<string, string> = {
   magnolia: "Montgomery",
   pearland: "Brazoria",
   alvin: "Brazoria",
-  league: "Galveston",
   "league city": "Galveston",
   galveston: "Galveston",
   friendswood: "Galveston",

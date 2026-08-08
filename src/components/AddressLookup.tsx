@@ -25,8 +25,6 @@ function sourceLabel(s: PropertySuggestion["source"]) {
       return "Open CAD cache";
     case "census":
       return "US Census address";
-    case "rentcast":
-      return "RentCast records";
     case "sample":
       return "Sample";
     default:

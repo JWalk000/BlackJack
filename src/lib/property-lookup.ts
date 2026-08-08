@@ -1,14 +1,12 @@
 ﻿/**
  * Free property lookup for deal autofill.
- * Prefer free-leads CAD cache; optionally live HCAD/FBCAD address match;
- * Census geocoder for US address parse; ZHVI area comps for market context.
- * Optional RentCast when RENTCAST_API_KEY is set.
+ * Prefer free-leads CAD cache; live HCAD address match; Census geocode nationally.
+ * Market comps via free ZHVI (see market-comps.ts).
  */
 
 import type { PropertyInfo } from "@/lib/types";
 import {
   getFinderInventory,
-  getFreeCadListings,
   type FreeLeadListing,
 } from "@/data/listings";
 import {
@@ -34,13 +32,7 @@ export type PropertySuggestion = {
   lotSf?: number | null;
   yearBuilt?: number | null;
   apn?: string;
-  source:
-    | "free-cad"
-    | "hcad-live"
-    | "fbcad-live"
-    | "sample"
-    | "census"
-    | "rentcast";
+  source: "free-cad" | "hcad-live" | "fbcad-live" | "sample" | "census";
   notes?: string;
 };
 
@@ -61,12 +53,6 @@ function normalizeAddr(s: string): string {
 function listingToSuggestion(l: FreeLeadListing): PropertySuggestion {
   const lotSf =
     l.acres != null && l.acres > 0 ? Math.round(l.acres * 43560) : null;
-  let yearBuilt: number | null = null;
-  const yearMatch = (l.notes || "").match(/(?:year\s*built|built)[:\s]+(\d{4})/i);
-  if (yearMatch) {
-    const y = Number(yearMatch[1]);
-    if (y >= 1800 && y <= 2100) yearBuilt = y;
-  }
   return {
     id: l.id,
     label: [l.address, l.city, l.state, l.zip].filter(Boolean).join(", "),
@@ -79,32 +65,25 @@ function listingToSuggestion(l: FreeLeadListing): PropertySuggestion {
     taxAssessment: l.price ?? null,
     buildingSf: l.buildingSf ?? null,
     lotSf,
-    yearBuilt,
+    yearBuilt: null,
     apn: l.apn,
     source:
-      l.provider === "fbcad"
-        ? "fbcad-live"
-        : l.provider === "hcad"
-          ? "free-cad"
+      l.source === "sample"
+        ? "sample"
+        : l.provider === "fbcad"
+          ? "fbcad-live"
           : "free-cad",
     notes: l.buildingSfNote || l.notes,
   };
 }
 
-/** Local free CAD leads only — never demo/sample stubs. */
 export function searchFreeLeads(query: string, limit = 8): PropertySuggestion[] {
   const q = normalizeAddr(query);
   if (q.length < 3) return [];
   const tokens = q.split(" ").filter((t) => t.length > 1);
   const scored: { score: number; s: PropertySuggestion }[] = [];
 
-  const inventory =
-    getFreeCadListings().length > 0
-      ? getFreeCadListings()
-      : getFinderInventory().filter((l) => l.source !== "sample");
-
-  for (const l of inventory) {
-    if (l.source === "sample") continue;
+  for (const l of getFinderInventory()) {
     const hay = normalizeAddr(
       `${l.address} ${l.city} ${l.zip} ${l.county} ${l.apn || ""}`,
     );
@@ -116,7 +95,7 @@ export function searchFreeLeads(query: string, limit = 8): PropertySuggestion[] 
     if (normalizeAddr(l.address).startsWith(tokens.slice(0, 2).join(" "))) {
       score += 20;
     }
-    if (score >= tokens.join("").length * 0.4) {
+    if (score >= tokens.join("").length * 0.35) {
       scored.push({ score, s: listingToSuggestion(l) });
     }
   }
@@ -126,7 +105,7 @@ export function searchFreeLeads(query: string, limit = 8): PropertySuggestion[] 
 }
 
 function buildSiteAddress(a: Record<string, unknown>): string {
-  const parts = [
+  return [
     a.site_str_num,
     a.site_str_pfx,
     a.site_str_name,
@@ -134,11 +113,10 @@ function buildSiteAddress(a: Record<string, unknown>): string {
     a.site_str_sfx_dir,
   ]
     .map((x) => String(x ?? "").trim())
-    .filter(Boolean);
-  return parts.join(" ");
+    .filter(Boolean)
+    .join(" ");
 }
 
-/** Live HCAD parcel match by house number + street tokens (Harris County). */
 export async function searchHcadLive(
   query: string,
   limit = 6,
@@ -152,7 +130,10 @@ export async function searchHcadLive(
     .replace(/[,.].*$/, "")
     .trim()
     .toUpperCase()
-    .replace(/\b(STREET|ST|AVENUE|AVE|DRIVE|DR|ROAD|RD|LANE|LN|BLVD|BOULEVARD)\b/gi, "")
+    .replace(
+      /\b(STREET|ST|AVENUE|AVE|DRIVE|DR|ROAD|RD|LANE|LN|BLVD|BOULEVARD)\b/gi,
+      "",
+    )
     .trim()
     .split(/\s+/)
     .filter((t) => t.length > 1)
@@ -193,7 +174,8 @@ export async function searchHcadLive(
         const address = buildSiteAddress(a);
         const city = String(a.site_city || "Houston").trim();
         const zip = String(a.site_zip || "").trim();
-        const market = Number(a.total_market_val || a.total_appraised_val) || null;
+        const market =
+          Number(a.total_market_val || a.total_appraised_val) || null;
         const lotSf = Number(a.land_sqft) || null;
         return {
           id: `hcad-${a.HCAD_NUM || i}`,
@@ -210,17 +192,17 @@ export async function searchHcadLive(
           yearBuilt: null,
           apn: String(a.HCAD_NUM || "").trim() || undefined,
           source: "hcad-live" as const,
-          notes: "Harris CAD parcel · assessed value (not MLS). Living area not on layer.",
+          notes:
+            "Harris CAD parcel · assessed value (not MLS). Living area not on layer.",
         };
       });
     } catch {
-      /* try next endpoint */
+      /* try next */
     }
   }
   return [];
 }
 
-/** US Census one-line geocoder — structured address only (no tax/sf). */
 export async function censusGeocode(
   query: string,
 ): Promise<PropertySuggestion | null> {
@@ -283,43 +265,24 @@ export async function combinedSuggest(
   const local = searchFreeLeads(query, 8);
   const out: PropertySuggestion[] = [];
   const ids = new Set<string>();
-
   const push = (s: PropertySuggestion) => {
     const k = s.label.toLowerCase();
     if (ids.has(k)) return;
-    if (s.source === "sample") return;
     out.push(s);
     ids.add(k);
   };
 
   for (const s of local) push(s);
-
-  const hcad = await searchHcadLive(query, 6);
-  for (const s of hcad) push(s);
-
-  if (out.length < 3) {
+  if (local.length < 5) {
+    for (const s of await searchHcadLive(query, 6)) push(s);
+  }
+  if (out.length === 0) {
     const geo = await censusGeocode(query);
     if (geo) push(geo);
   }
-
-  if (out.length < 2) {
-    try {
-      const { hasRentCastKey, rentcastPropertyToSuggestion } = await import(
-        "@/lib/rentcast-suggest",
-      );
-      if (hasRentCastKey()) {
-        const rc = await rentcastPropertyToSuggestion(query);
-        if (rc) push(rc);
-      }
-    } catch {
-      /* optional */
-    }
-  }
-
   return out.slice(0, 10);
 }
 
-/** Map a suggestion onto deal property fields (only fills known values). */
 export function suggestionToPropertyPatch(
   s: PropertySuggestion,
 ): Partial<PropertyInfo> {
@@ -339,7 +302,6 @@ export function suggestionToPropertyPatch(
   return patch;
 }
 
-/** Sync free resolve (ZHVI zip/county). API route adds RentCast when needed. */
 export function resolveMarketComps(input: {
   city?: string;
   state?: string;
