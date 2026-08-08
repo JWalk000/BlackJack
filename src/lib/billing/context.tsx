@@ -17,8 +17,9 @@ import {
   raiseLocalFreeDealsCreated,
   recordLocalFreeDealCreated,
 } from "./free-deal-usage";
+import { isBillingFreeMode } from "./plans";
 import {
-  FREE_ENTITLEMENT,
+  freeEntitlement,
   fetchOwnProfile,
   profileToEntitlement,
   raiseProfileFreeDealsCreated,
@@ -26,10 +27,16 @@ import {
 } from "./profiles";
 
 type BillingContextValue = Entitlement & {
+  /**
+   * True while product is free (default). Prefer this for paywall UI —
+   * hide deal-limit banners/tooltips whenever freeMode is on.
+   */
+  freeMode: boolean;
   refresh: () => Promise<void>;
   /**
    * After a successful free-tier deal create: bump local lifetime counter and
    * best-effort raise profiles.free_deals_created when signed in.
+   * No-op in freeMode (counters not limited).
    */
   recordFreeDealCreated: () => Promise<void>;
 };
@@ -38,28 +45,19 @@ const BillingContext = createContext<BillingContextValue | null>(null);
 
 export function BillingProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading, cloudReady } = useAuth();
-  const [entitlement, setEntitlement] = useState<Entitlement>({
-    ...FREE_ENTITLEMENT,
-    loading: true,
-  });
+  const [entitlement, setEntitlement] = useState<Entitlement>(() =>
+    freeEntitlement(0, true),
+  );
 
   const refresh = useCallback(async () => {
     if (!cloudReady || !user) {
       const local = getLocalFreeDealsCreated();
-      setEntitlement({
-        ...FREE_ENTITLEMENT,
-        freeDealsCreated: local,
-        loading: false,
-      });
+      setEntitlement(freeEntitlement(local, false));
       return;
     }
     const sb = tryCreateClient();
     if (!sb) {
-      setEntitlement({
-        ...FREE_ENTITLEMENT,
-        freeDealsCreated: getLocalFreeDealsCreated(),
-        loading: false,
-      });
+      setEntitlement(freeEntitlement(getLocalFreeDealsCreated(), false));
       return;
     }
     try {
@@ -77,15 +75,15 @@ export function BillingProvider({ children }: { children: ReactNode }) {
         loading: false,
       });
     } catch {
-      setEntitlement({
-        ...FREE_ENTITLEMENT,
-        freeDealsCreated: getLocalFreeDealsCreated(),
-        loading: false,
-      });
+      setEntitlement(freeEntitlement(getLocalFreeDealsCreated(), false));
     }
   }, [cloudReady, user]);
 
+  const freeMode = isBillingFreeMode();
+
   const recordFreeDealCreated = useCallback(async () => {
+    // Free mode / unlimited: do not bump lifetime free counters or block create.
+    if (isBillingFreeMode()) return;
     const local = recordLocalFreeDealCreated();
     setEntitlement((prev) => ({
       ...prev,
@@ -117,10 +115,11 @@ export function BillingProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       ...entitlement,
+      freeMode,
       refresh,
       recordFreeDealCreated,
     }),
-    [entitlement, refresh, recordFreeDealCreated],
+    [entitlement, freeMode, refresh, recordFreeDealCreated],
   );
 
   return (

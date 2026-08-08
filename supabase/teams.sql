@@ -1,10 +1,22 @@
 -- =============================================================================
 -- Estate teams — run in Supabase SQL Editor (after schema.sql)
--- https://supabase.com/dashboard → SQL → New query
+--
+-- Dashboard steps (fixes: Could not find the function public.create_team(p_name)):
+--   1. https://supabase.com/dashboard → project → SQL → New query
+--   2. Paste THIS entire file (repo: supabase/teams.sql)
+--   3. Run → wait a few seconds → retry Create team in the app
+--
+-- Or: npm run db:apply-teams  (requires `npx supabase login`, not a public URL)
 --
 -- Adds: teams, team_members (email and/or phone invites), user_deals.team_id,
 --       profiles.plan 'team', claim-on-login by email OR phone, team-deal RLS.
 -- Safe to re-run (IF NOT EXISTS / drop policy if exists).
+--
+-- App RPCs (arg names must match PostgREST):
+--   create_team(p_name text)
+--   invite_team_member(p_team_id uuid, p_email text, p_phone text)
+--   claim_team_invites()
+--   remove_team_member(p_member_id uuid)
 --
 -- Phone auth (Supabase console, separate from this SQL):
 --   Authentication → Providers → Phone → enable
@@ -220,8 +232,13 @@ $$;
 
 grant execute on function public.claim_team_invites() to authenticated;
 
--- Create team (owner seat) — max one membership per user for MVP
--- TODO(stripe): gate on profiles.plan = 'team' + active Stripe sub ($35/mo)
+-- Create team (owner seat) — max one membership per user.
+-- Entitlements: Stripe webhooks are the ONLY path that set plan=team + paid status.
+-- Creating a team does NOT grant plan/status (old MVP grant removed).
+--
+-- Free-for-now product: no paid plan=team check on create (app free-mode grants
+-- isTeam). When turning billing back on (BILLING_ENFORCED=true), re-add a plan
+-- gate here if you need DB-level enforcement — app UI already gates via isTeam.
 create or replace function public.create_team(p_name text)
 returns uuid
 language plpgsql
@@ -267,14 +284,7 @@ begin
   insert into public.team_members (team_id, user_id, email, phone, role, joined_at)
   values (v_team_id, v_uid, v_email, v_phone, 'owner', now());
 
-  -- MVP: mark profile team/active until Stripe Checkout wires Team product
-  insert into public.profiles (user_id, plan, status, free_deals_created, updated_at)
-  values (v_uid, 'team', 'active', 0, now())
-  on conflict (user_id) do update
-  set
-    plan = 'team',
-    status = 'active',
-    updated_at = now();
+  -- Do NOT touch profiles.plan / status — Stripe webhook owns entitlements.
 
   return v_team_id;
 end;

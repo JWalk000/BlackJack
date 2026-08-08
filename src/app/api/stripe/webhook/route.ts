@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import {
   getStripe,
+  getStripePriceIdProMonthly,
+  getStripePriceIdTeamMonthly,
   getStripeWebhookSecret,
 } from "@/lib/billing/stripe";
-import { isCloudEntitled, type PlanId } from "@/lib/billing/plans";
+import { PAID_ACTIVE_STATUSES, type PlanId } from "@/lib/billing/plans";
 import {
   findUserIdByStripeCustomer,
   upsertProfileEntitlement,
@@ -16,13 +18,45 @@ export const runtime = "nodejs";
 /** Disable body parsing helpers — we need the raw body for signature verify. */
 export const dynamic = "force-dynamic";
 
+function priceIdsInSubscription(sub: Stripe.Subscription): string[] {
+  return (sub.items?.data ?? [])
+    .map((item) => {
+      const price = item.price;
+      if (!price) return null;
+      return typeof price === "string" ? price : price.id;
+    })
+    .filter((id): id is string => Boolean(id));
+}
+
+/**
+ * Map Stripe subscription → Estate plan.
+ * Team price ID wins when present; otherwise Pro price or metadata; free if not paying.
+ */
 function planFromSubscription(
   sub: Stripe.Subscription,
 ): { plan: PlanId; status: string } {
   const status = sub.status;
-  // TODO(stripe): map Team price id → plan 'team' when Team Checkout is wired
-  const plan: PlanId = isCloudEntitled("pro", status) ? "pro" : "free";
-  return { plan, status };
+  if (!PAID_ACTIVE_STATUSES.has(status)) {
+    return { plan: "free", status };
+  }
+
+  const priceIds = priceIdsInSubscription(sub);
+  const teamPrice = getStripePriceIdTeamMonthly();
+  const proPrice = getStripePriceIdProMonthly();
+
+  if (teamPrice && priceIds.includes(teamPrice)) {
+    return { plan: "team", status };
+  }
+  if (proPrice && priceIds.includes(proPrice)) {
+    return { plan: "pro", status };
+  }
+
+  const metaPlan = sub.metadata?.estate_plan;
+  if (metaPlan === "team") return { plan: "team", status };
+  if (metaPlan === "pro") return { plan: "pro", status };
+
+  // Default paid unknown price → pro (legacy Checkouts before dual prices)
+  return { plan: "pro", status };
 }
 
 async function resolveUserId(
@@ -101,7 +135,8 @@ export async function POST(request: Request) {
         }
 
         let status = "active";
-        let plan: PlanId = "pro";
+        let plan: PlanId =
+          session.metadata?.estate_plan === "team" ? "team" : "pro";
         if (session.subscription) {
           const subId =
             typeof session.subscription === "string"
@@ -109,6 +144,14 @@ export async function POST(request: Request) {
               : session.subscription.id;
           const sub = await stripe.subscriptions.retrieve(subId);
           ({ plan, status } = planFromSubscription(sub));
+          // Session metadata is a reliable fall back when price env not on webhook host yet
+          if (
+            plan === "pro" &&
+            session.metadata?.estate_plan === "team" &&
+            PAID_ACTIVE_STATUSES.has(status)
+          ) {
+            plan = "team";
+          }
         }
 
         await upsertProfileEntitlement(service, {

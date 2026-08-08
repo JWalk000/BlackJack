@@ -309,12 +309,13 @@
   background:
     radial-gradient(ellipse 120% 80% at 10% 0%, rgba(255, 255, 255, 0.55), transparent 50%),
     linear-gradient(165deg, #fffdf8 0%, var(--paper) 45%, #f0e8d8 100%);
-  border: 3px solid var(--ink);
+  border: 2.5px solid var(--ink);
   box-shadow:
-    0 18px 40px rgba(12, 15, 14, 0.22),
-    0 4px 10px rgba(12, 15, 14, 0.12),
+    0 12px 28px rgba(12, 15, 14, 0.16),
+    0 3px 8px rgba(12, 15, 14, 0.1),
     inset 0 0 0 1px rgba(255, 255, 255, 0.4);
   transform: rotate(1.25deg);
+  opacity: 0.96;
 }
 /* Team sticker sits next to Pro — same paper, opposite tilt + forest badge */
 .sticker-pro.sticker-team {

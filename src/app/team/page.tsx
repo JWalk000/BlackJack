@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AuthPanel } from "@/components/AuthPanel";
 import { useAuth } from "@/lib/auth-context";
 import { useBilling } from "@/lib/billing/context";
@@ -9,7 +9,13 @@ import {
   TEAM_PRICE_USD_MONTHLY,
   TEAM_SEAT_LIMIT,
   PLAN_COPY,
+  isBillingFreeMode,
+  isPaidTeamPlan,
 } from "@/lib/billing/plans";
+import {
+  getSessionAuthHeaders,
+  parseApiJson,
+} from "@/lib/supabase/session-fetch";
 import {
   claimTeamInvites,
   createTeam,
@@ -23,7 +29,7 @@ import {
 
 export default function TeamPage() {
   const { cloudReady, user, loading: authLoading } = useAuth();
-  const { isTeam, plan, refresh: refreshBilling } = useBilling();
+  const { isTeam, plan, status, refresh: refreshBilling } = useBilling();
   const [authOpen, setAuthOpen] = useState(false);
   const [myTeam, setMyTeam] = useState<MyTeam | null>(null);
   const [ready, setReady] = useState(false);
@@ -32,6 +38,7 @@ export default function TeamPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const pendingTeamCheckout = useRef(false);
 
   const reload = useCallback(async () => {
     if (!user || !cloudReady) {
@@ -51,11 +58,71 @@ export default function TeamPage() {
     void reload();
   }, [authLoading, reload]);
 
+  const runTeamCheckout = useCallback(async () => {
+    setError(null);
+    setBusy("checkout");
+    try {
+      const headers = await getSessionAuthHeaders();
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: {
+          ...headers,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ plan: "team" }),
+      });
+      const data = await parseApiJson<{ url?: string; error?: string }>(res);
+      if (data.parseError) {
+        setError(data.parseError);
+        return;
+      }
+      if (!res.ok || !data.url) {
+        setError(
+          data.error ||
+            (res.status === 503
+              ? "Team billing is not configured yet. Ask the site owner to set STRIPE_PRICE_ID_TEAM_MONTHLY."
+              : "Could not start Team Checkout."),
+        );
+        return;
+      }
+      window.location.assign(data.url);
+    } catch {
+      setError("Network error starting Checkout.");
+    } finally {
+      setBusy(null);
+    }
+  }, []);
+
+  const startTeamSubscribe = useCallback(async () => {
+    setError(null);
+    if (authLoading) {
+      setError("Checking sign-in status… try again in a moment.");
+      return;
+    }
+    if (!user) {
+      pendingTeamCheckout.current = true;
+      setAuthOpen(true);
+      return;
+    }
+    await runTeamCheckout();
+  }, [authLoading, user, runTeamCheckout]);
+
+  useEffect(() => {
+    if (!user || !pendingTeamCheckout.current) return;
+    pendingTeamCheckout.current = false;
+    void runTeamCheckout();
+  }, [user, runTeamCheckout]);
+
   async function onCreate() {
     setError(null);
     setNote(null);
     if (!user) {
       setAuthOpen(true);
+      return;
+    }
+    if (!isTeam) {
+      setError("Subscribe to Team first, then create your workspace.");
       return;
     }
     setBusy("create");
@@ -65,7 +132,7 @@ export default function TeamPage() {
       setError(res.error);
       return;
     }
-    setNote("Team created. Invite up to 4 teammates by email or phone.");
+    setNote("Team created. Invite up to 4 teammates by email.");
     setName("");
     await refreshBilling();
     await reload();
@@ -84,7 +151,7 @@ export default function TeamPage() {
       return;
     }
     setNote(
-      `Invited ${contact}. They get team deals when they sign in with that email or phone.`,
+      `Invited ${contact}. They get team deals when they sign in with that email.`,
     );
     setInviteContact("");
     await reload();
@@ -107,6 +174,8 @@ export default function TeamPage() {
 
   const teamCopy = PLAN_COPY.team;
   const remaining = myTeam ? seatsRemaining(myTeam.members.length) : TEAM_SEAT_LIMIT - 1;
+  const freeMode = isBillingFreeMode();
+  const paidTeam = isPaidTeamPlan(plan, status);
 
   if (authLoading || !ready) {
     return (
@@ -128,13 +197,23 @@ export default function TeamPage() {
         Collaborate on deals
       </h1>
       <p className="mt-3 max-w-lg text-base leading-relaxed text-muted">
-        {teamCopy.blurb} Owner invites by email or phone ({TEAM_SEAT_LIMIT}{" "}
-        seats). Members keep their own deals and see shared team deals.{" "}
-        <span className="font-medium text-ink">
-          ${TEAM_PRICE_USD_MONTHLY}/mo
-        </span>
-        {/* TODO(stripe): wire Checkout for Team price */} — Stripe billing coming
-        soon; create a team in-app for now.
+        {teamCopy.blurb} Owner invites by email ({TEAM_SEAT_LIMIT} seats).
+        {freeMode ? (
+          <span className="font-medium text-ink">
+            {" "}
+            Early access — create a team free for now (Team will be $
+            {TEAM_PRICE_USD_MONTHLY}/mo later).
+          </span>
+        ) : (
+          <>
+            {" "}
+            Members keep their own free plan limits and work shared team deals.{" "}
+            <span className="font-medium text-ink">
+              ${TEAM_PRICE_USD_MONTHLY}/mo required for the owner
+            </span>
+            — no free Team unlock.
+          </>
+        )}
       </p>
 
       {!cloudReady ? (
@@ -144,7 +223,9 @@ export default function TeamPage() {
       ) : !user ? (
         <div className="mt-8 border border-line bg-stone/50 px-4 py-5">
           <p className="text-sm text-muted">
-            Sign in to create a team or accept an invite.
+            {freeMode
+              ? "Sign in to create a team or accept an invite."
+              : "Sign in to subscribe, create a team, or accept an invite."}
           </p>
           <button
             type="button"
@@ -154,6 +235,35 @@ export default function TeamPage() {
             Sign in
           </button>
         </div>
+      ) : !myTeam && !isTeam ? (
+        <div className="mt-10 space-y-6 border border-line bg-surface p-6 sm:p-8">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+              Subscribe first
+            </p>
+            <p className="mt-2 text-sm text-muted">
+              Team is ${TEAM_PRICE_USD_MONTHLY}/mo. Payment via Stripe unlocks
+              Create team. Invited members stay on Free for personal deals and
+              can still work shared team deals.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={busy === "checkout"}
+            onClick={() => void startTeamSubscribe()}
+            className="btn-signal w-full py-3.5 disabled:opacity-60"
+          >
+            {busy === "checkout"
+              ? "Redirecting…"
+              : `Subscribe to Team — $${TEAM_PRICE_USD_MONTHLY}/mo`}
+          </button>
+          <p className="text-sm text-muted">
+            Need unlimited personal deals only?{" "}
+            <Link href="/pricing" className="font-medium text-signal">
+              Get Pro instead →
+            </Link>
+          </p>
+        </div>
       ) : !myTeam ? (
         <div className="mt-10 space-y-6 border border-line bg-surface p-6 sm:p-8">
           <div>
@@ -161,11 +271,10 @@ export default function TeamPage() {
               Create team
             </p>
             <p className="mt-2 text-sm text-muted">
-              You become the owner and use one seat. Invite up to{" "}
+              {freeMode
+                ? "Name your workspace, then invite up to"
+                : "You are on the paid Team plan. Name your workspace, then invite up to"}{" "}
               {TEAM_SEAT_LIMIT - 1} people. Only you can add or remove members.
-              {isTeam || plan === "team"
-                ? " You are already on the Team plan."
-                : " Creating a team marks you as Team plan (MVP until Stripe)."}
             </p>
           </div>
           <label className="block">
@@ -200,8 +309,28 @@ export default function TeamPage() {
             <p className="mt-2 text-sm text-sand/85">
               {myTeam.members.length} / {TEAM_SEAT_LIMIT} seats
               {myTeam.isOwner ? " · you are the owner" : " · member"}
+              {myTeam.isOwner && !freeMode && !paidTeam
+                ? " · owner Team subscription inactive"
+                : freeMode && myTeam.isOwner && !paidTeam
+                  ? " · early access (free)"
+                  : ""}
             </p>
           </div>
+
+          {myTeam.isOwner && !freeMode && !paidTeam ? (
+            <div className="border border-loss/40 bg-loss/5 px-4 py-3 text-sm text-ink">
+              Your Team subscription is not active. Renew on Pricing to keep
+              inviting and new owner features.
+              <button
+                type="button"
+                className="ml-2 font-medium text-signal"
+                disabled={busy === "checkout"}
+                onClick={() => void startTeamSubscribe()}
+              >
+                Subscribe →
+              </button>
+            </div>
+          ) : null}
 
           <section className="border border-line bg-surface">
             <div className="border-b border-line px-5 py-4 sm:px-6">
@@ -221,11 +350,6 @@ export default function TeamPage() {
                       <p className="text-sm font-medium text-ink">{label}</p>
                       <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
                         {m.role}
-                        {m.phone && m.email
-                          ? " · email + phone"
-                          : m.phone
-                            ? " · phone"
-                            : " · email"}
                         {m.joined_at
                           ? " · joined"
                           : m.user_id
@@ -252,30 +376,30 @@ export default function TeamPage() {
           {myTeam.isOwner ? (
             <section className="border border-line bg-surface p-6 sm:p-8">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                Invite by email or phone
+                Invite by email
               </p>
               <p className="mt-2 text-sm text-muted">
                 {remaining > 0
                   ? `${remaining} seat${remaining === 1 ? "" : "s"} left.`
                   : "Team is full."}{" "}
-                They access team deals after signing in with a matching email or
-                phone (SMS OTP or email/password).
+                They access team deals after signing in with a matching email.
               </p>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                 <input
-                  type="text"
+                  type="email"
                   inputMode="email"
-                  autoComplete="off"
+                  autoComplete="email"
                   className="min-w-0 flex-1 border border-line bg-paper px-3 py-2.5 text-sm text-ink outline-none focus:border-forest"
                   value={inviteContact}
                   onChange={(e) => setInviteContact(e.target.value)}
-                  placeholder="teammate@example.com or +1 555 123 4567"
-                  disabled={remaining <= 0}
+                  placeholder="teammate@example.com"
+                  disabled={remaining <= 0 || !isTeam}
                 />
                 <button
                   type="button"
                   disabled={
                     remaining <= 0 ||
+                    !isTeam ||
                     busy === "invite" ||
                     !inviteContact.trim()
                   }
@@ -285,16 +409,23 @@ export default function TeamPage() {
                   {busy === "invite" ? "Inviting…" : "Add member"}
                 </button>
               </div>
+              {!isTeam ? (
+                <p className="mt-3 text-xs text-muted">
+                  Active Team subscription required to invite new members.
+                </p>
+              ) : null}
             </section>
           ) : (
             <p className="text-sm text-muted">
-              Only the team creator can add or remove people.
+              Only the team creator can add or remove people. You can work
+              shared team deals without a personal Pro plan.
             </p>
           )}
 
           <p className="text-sm text-muted">
-            Open a deal and use <span className="font-medium text-ink">Share with team</span>{" "}
-            so everyone on the roster can view and edit it.{" "}
+            Open a deal and use{" "}
+            <span className="font-medium text-ink">Share with team</span> so
+            everyone on the roster can view and edit it.{" "}
             <Link href="/deals" className="font-medium text-signal">
               My deals →
             </Link>
@@ -319,7 +450,19 @@ export default function TeamPage() {
         </Link>
       </p>
 
-      <AuthPanel open={authOpen} onClose={() => setAuthOpen(false)} />
+      <AuthPanel
+        open={authOpen}
+        onClose={() => {
+          setAuthOpen(false);
+          if (!user) pendingTeamCheckout.current = false;
+        }}
+        onAuthenticated={() => {
+          if (pendingTeamCheckout.current) {
+            pendingTeamCheckout.current = false;
+            void runTeamCheckout();
+          }
+        }}
+      />
     </div>
   );
 }

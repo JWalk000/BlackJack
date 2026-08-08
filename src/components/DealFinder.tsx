@@ -70,7 +70,8 @@ function sourceBadge(listing: Listing | FreeLeadListing): string {
 
 export function DealFinder() {
   const router = useRouter();
-  const { isPro, freeDealsCreated, recordFreeDealCreated } = useBilling();
+  const { isPro, freeMode, freeDealsCreated, recordFreeDealCreated } =
+    useBilling();
   const inventory = useMemo(() => getFinderInventory(), []);
   const leadsMeta = useMemo(() => getFreeLeadsMeta(), []);
   const compsMeta = useMemo(() => getAreaCompsMeta(), []);
@@ -213,7 +214,7 @@ export function DealFinder() {
       ),
     });
     saveDeal(deal);
-    if (!isPro) {
+    if (!freeMode && !isPro) {
       await recordFreeDealCreated();
     }
     router.push(`/deals/${deal.id}`);

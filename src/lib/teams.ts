@@ -38,6 +38,27 @@ export type MyTeam = {
 
 export { normalizeEmail, normalizePhone, displayContact };
 
+/** Map PostgREST/schema-cache errors to actionable messages. */
+export function mapTeamRpcError(message: string): string {
+  const m = message || "Unknown error";
+  if (
+    /schema cache|could not find the function/i.test(m) ||
+    /does not exist/i.test(m)
+  ) {
+    return (
+      "Teams database is not migrated. In Supabase → SQL Editor, run the full file " +
+      "supabase/teams.sql (after schema.sql). Then retry Create team."
+    );
+  }
+  if (/Team plan required/i.test(m)) {
+    return "Subscribe to Team ($35/mo) on Pricing first, then create your team.";
+  }
+  if (/not authenticated|jwt/i.test(m)) {
+    return "Sign in again, then create or join a team.";
+  }
+  return m;
+}
+
 /** Attach pending invites that match the signed-in user's email or phone. */
 export async function claimTeamInvites(
   sb?: SupabaseClient | null,
@@ -111,7 +132,7 @@ export async function createTeam(
   if (!trimmed) return { error: "Team name required" };
 
   const { data, error } = await sb.rpc("create_team", { p_name: trimmed });
-  if (error) return { error: error.message };
+  if (error) return { error: mapTeamRpcError(error.message) };
   return { teamId: data as string };
 }
 
@@ -158,7 +179,7 @@ export async function inviteTeamMember(
     p_email: email,
     p_phone: phone,
   });
-  if (error) return { error: error.message };
+  if (error) return { error: mapTeamRpcError(error.message) };
   return { memberId: data as string };
 }
 
@@ -170,7 +191,7 @@ export async function removeTeamMember(
   const { error } = await sb.rpc("remove_team_member", {
     p_member_id: memberId,
   });
-  if (error) return { error: error.message };
+  if (error) return { error: mapTeamRpcError(error.message) };
   return {};
 }
 

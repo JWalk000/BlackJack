@@ -3,8 +3,11 @@ import {
   getAppUrl,
   getStripe,
   getStripePriceIdProMonthly,
+  getStripePriceIdTeamMonthly,
   isStripeConfigured,
+  isStripeTeamConfigured,
   randomIntegrationSuffix,
+  type CheckoutPlanId,
 } from "@/lib/billing/stripe";
 import {
   resolveRequestAuth,
@@ -14,11 +17,20 @@ import {
   fetchOwnProfile,
   upsertProfileEntitlement,
 } from "@/lib/billing/profiles";
+import type { PlanId } from "@/lib/billing/plans";
 
 export const runtime = "nodejs";
 
 const BILLING_NOT_CONFIGURED =
   "Billing not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID_PRO_MONTHLY on the server (e.g. Vercel env).";
+
+const TEAM_BILLING_NOT_CONFIGURED =
+  "Team billing not configured. Set STRIPE_PRICE_ID_TEAM_MONTHLY on the server (Team product $35/mo).";
+
+function preservePlan(plan: PlanId | undefined): PlanId {
+  if (plan === "pro" || plan === "team") return plan;
+  return "free";
+}
 
 export async function POST(request: Request) {
   try {
@@ -32,7 +44,27 @@ export async function POST(request: Request) {
     }
     const { supabase, user } = auth;
 
-    const priceId = getStripePriceIdProMonthly()!;
+    let checkoutPlan: CheckoutPlanId = "pro";
+    try {
+      const body = (await request.json()) as { plan?: string };
+      if (body?.plan === "team") checkoutPlan = "team";
+      else if (body?.plan === "pro") checkoutPlan = "pro";
+    } catch {
+      // Empty body is fine — default Pro.
+    }
+
+    if (checkoutPlan === "team" && !isStripeTeamConfigured()) {
+      return NextResponse.json(
+        { error: TEAM_BILLING_NOT_CONFIGURED },
+        { status: 503 },
+      );
+    }
+
+    const priceId =
+      checkoutPlan === "team"
+        ? getStripePriceIdTeamMonthly()!
+        : getStripePriceIdProMonthly()!;
+
     const stripe = getStripe();
     const appUrl = getAppUrl(request);
 
@@ -47,11 +79,12 @@ export async function POST(request: Request) {
       customerId = customer.id;
 
       // Prefer service role so the write succeeds even if RLS blocks client updates.
+      // Creating a Stripe customer must NOT promote plan — stay free until webhook.
       const service = tryCreateServiceClient() ?? supabase;
       const upsert = await upsertProfileEntitlement(service, {
         userId: user.id,
         stripeCustomerId: customerId,
-        plan: profile?.plan === "pro" ? "pro" : "free",
+        plan: preservePlan(profile?.plan),
         status: profile?.status ?? "inactive",
       });
       if (upsert.error) {
@@ -75,19 +108,21 @@ export async function POST(request: Request) {
       customer: customerId,
       client_reference_id: user.id,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/pricing?checkout=success`,
+      success_url: `${appUrl}/pricing?checkout=success&plan=${checkoutPlan}`,
       cancel_url: `${appUrl}/pricing?checkout=cancel`,
       // Dynamic payment methods — omit payment_method_types (Stripe best practice).
       allow_promotion_codes: true,
       subscription_data: {
         metadata: {
           supabase_user_id: user.id,
+          estate_plan: checkoutPlan,
         },
       },
       metadata: {
         supabase_user_id: user.id,
+        estate_plan: checkoutPlan,
       },
-      integration_identifier: `estate_pro_${randomIntegrationSuffix()}`,
+      integration_identifier: `estate_${checkoutPlan}_${randomIntegrationSuffix()}`,
     });
 
     if (!session.url) {

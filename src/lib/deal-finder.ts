@@ -282,7 +282,8 @@ export function filterAndRankListings(
 
 /** OpenStreetMap embed/map links from coords */
 export function osmEmbedUrl(lat: number, lng: number, zoom = 14): string {
-  const d = 0.02;
+  // ~4–5km half-span so neighborhood context is visible without pan
+  const d = 0.035;
   const left = lng - d;
   const right = lng + d;
   const top = lat + d;

@@ -10,7 +10,7 @@ import { PackageDocument } from "./PackageDocument";
 import { BillingToast, type BillingToastState } from "./BillingToast";
 
 export function BankPackage({ id }: { id: string }) {
-  const { isPro } = useBilling();
+  const { isPro, freeMode } = useBilling();
   const [deal, setDeal] = useState<Deal | null>(null);
   const [missing, setMissing] = useState(false);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
@@ -120,7 +120,7 @@ export function BankPackage({ id }: { id: string }) {
                 disabled={shareBusy}
                 onClick={createShareLink}
                 title={
-                  isPro
+                  isPro || freeMode
                     ? "Create a read-only share link"
                     : "Pro feature — upgrade to share online"
                 }
@@ -128,7 +128,7 @@ export function BankPackage({ id }: { id: string }) {
               >
                 {shareBusy
                   ? "Creating link…"
-                  : isPro
+                  : isPro || freeMode
                     ? "Copy share link"
                     : "Share link (Pro)"}
               </button>
@@ -136,14 +136,14 @@ export function BankPackage({ id }: { id: string }) {
           </div>
           <p className="text-[11px] text-[#666]">
             Print → Save as PDF in your browser.
-            {isPro
+            {isPro || freeMode
               ? " Share link is a read-only snapshot for lenders (no login required)."
               : " Online share links require Pro — PDF print works on Free."}
           </p>
           {shareStatus ? (
             <p className="text-sm text-[#12352c]" role="status">
               {shareStatus}{" "}
-              {!isPro ? (
+              {!freeMode && !isPro ? (
                 <Link href="/pricing" className="font-semibold underline">
                   View pricing
                 </Link>

@@ -11,15 +11,26 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Plans
 
-| | Free | Pro ($15/mo) |
-|--|------|--------------|
-| Deals | Up to **3** in browser `localStorage` | Unlimited |
-| Storage | Local only | Cloud sync + auto-save (`user_deals`) |
-| Multi-device | No | Yes (signed in + Pro) |
-| Bank package PDF | Print → Save as PDF | Same |
-| Share link `/package/[token]` | Paywalled | Unlimited |
+| | Free | Pro ($15/mo) | Team ($35/mo) |
+|--|------|--------------|---------------|
+| Deals | **1** lifetime local create (when billing enforced) | Unlimited cloud | Unlimited + shared team deals |
+| Storage | Local only (enforced) | Cloud sync + auto-save | Same + team seats (5) |
+| Share link `/package/[token]` | Paywalled (enforced) | Yes | Yes |
 
-Billing: Stripe Checkout (subscription) + Customer Portal. Entitlements live in Supabase `profiles` (`plan`, `status`, `stripe_customer_id`).
+**Current product mode: free** — paywalls off by default. Pro/Team prices, stickers, Checkout, webhooks, and price ID env vars stay wired; nothing is required to pay.
+
+Billing: Stripe Checkout + Customer Portal. Entitlements live in Supabase `profiles` (`plan`, `status`, `stripe_customer_id`).
+
+### Re-enable paid gates later
+
+In Vercel (and `.env.local` for local), set **both** then redeploy:
+
+```bash
+BILLING_ENFORCED=true
+NEXT_PUBLIC_BILLING_ENFORCED=true   # required for browser deal/team gates
+```
+
+Leave both unset (or anything other than `true`) to keep full product free. Stripe Checkout still works for voluntary support without these set.
 
 ## Storage modes
 
@@ -36,8 +47,11 @@ Guests work offline under Free limits. Cloud sync and share links require **Pro*
 ## Cloud setup (Supabase free tier)
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. **SQL Editor** → New query → paste entire contents of [`supabase/schema.sql`](supabase/schema.sql) → Run.
-   (Includes `profiles` for billing, `user_deals`, and `shared_packages`.)
+2. **SQL Editor** → New query → paste and run, **in order**:
+   1. Entire [`supabase/schema.sql`](supabase/schema.sql) — `profiles`, `user_deals`, `shared_packages`
+   2. Entire [`supabase/teams.sql`](supabase/teams.sql) — teams, invites, share-deal RLS, RPCs  
+      **Required for Create team.** Without it, the app errors with  
+      `Could not find the function public.create_team(p_name) in the schema cache`.
 3. **Project Settings → API** → copy:
    - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
    - `anon` `public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -51,12 +65,40 @@ Guests work offline under Free limits. Cloud sync and share links require **Pro*
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
+### Teams migration (prod already missing `create_team`?)
+
+If Create team fails with a schema-cache message:
+
+1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your **Estate** project.
+2. **SQL → New query**.
+3. Paste the **entire** contents of [`supabase/teams.sql`](supabase/teams.sql) (repo path).
+4. **Run**. It is idempotent (safe to re-run).
+5. Wait a few seconds for PostgREST cache, then retry **Create team** in the app.
+
+Or apply from a machine with Supabase CLI login (not a public API):
+
+```bash
+npx supabase login
+node scripts/apply-teams-sql.mjs
+# optional: node scripts/apply-teams-sql.mjs --project-ref <ref>
+```
+
+RPCs the app expects (PostgREST arg names must match):
+
+| RPC | Args |
+|-----|------|
+| `create_team` | `p_name text` |
+| `invite_team_member` | `p_team_id`, `p_email`, `p_phone` |
+| `claim_team_invites` | (none) |
+| `remove_team_member` | `p_member_id` |
+
 ### Auth behavior
 
 - Sign up / Sign in in the header (modal).
 - **Pro** signed-in users: saves write to `user_deals` and `localStorage`.
-- **Free** (guest or signed-in): local only, max 3 deals.
-- **My deals** merges cloud + browser only when Pro.
+- **Free** (guest or signed-in): local only, max 3 deals; **team members** also see deals with `team_id` set.
+- **My deals** merges cloud + browser when Pro **or** on a team.
+- After sign-in, pending invites matching email or phone are claimed automatically.
 - Sign out clears the session; local cache remains until cleared.
 
 ## Stripe billing (Pro)

@@ -19,22 +19,27 @@ export type Entitlement = {
   status: string;
   /** Pro or Team paid cloud (unlimited deals, personal cloud, share links). */
   isPro: boolean;
-  /** Owner is on Team plan (or MVP create_team set plan=team). */
+  /** Owner has paid Team plan (Stripe webhook). */
   isTeam: boolean;
   stripeCustomerId: string | null;
   freeDealsCreated: number;
   loading: boolean;
 };
 
-export const FREE_ENTITLEMENT: Entitlement = {
-  plan: "free",
-  status: "inactive",
-  isPro: false,
-  isTeam: false,
-  stripeCustomerId: null,
-  freeDealsCreated: 0,
-  loading: false,
-};
+/** Unpaid default; still honors free-mode Pro/Team access grants. */
+export function freeEntitlement(
+  freeDealsCreated = 0,
+  loading = false,
+): Entitlement {
+  return {
+    ...profileToEntitlement(null),
+    freeDealsCreated: Math.max(0, Math.floor(freeDealsCreated)),
+    loading,
+  };
+}
+
+/** @deprecated Prefer freeEntitlement() — free-mode flags are env-dependent. */
+export const FREE_ENTITLEMENT: Entitlement = freeEntitlement(0, false);
 
 function normalizePlanId(raw: string | null | undefined): PlanId {
   if (raw === "pro" || raw === "team") return raw;

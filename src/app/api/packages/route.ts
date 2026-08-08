@@ -6,36 +6,43 @@ import {
 } from "@/lib/shared-package";
 import { saveSharedPackage, shareStorageMode } from "@/lib/package-store";
 import { tryCreateServerClient } from "@/lib/supabase/server";
+import { isBillingFreeMode } from "@/lib/billing/plans";
 import { fetchOwnProfile, profileToEntitlement } from "@/lib/billing/profiles";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    // Soft server gate: share links are Pro (clients also paywall).
+    // Soft server gate: share links are Pro when billing is enforced.
+    // Free mode (default): any signed-in user; unauthenticated local store OK without Supabase.
+    const freeMode = isBillingFreeMode();
     const supabase = await tryCreateServerClient();
     if (supabase) {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (user) {
-        const profile = await fetchOwnProfile(supabase, user.id);
-        const { isPro } = profileToEntitlement(profile);
-        if (!isPro) {
-          return NextResponse.json(
-            {
-              error:
-                "Shareable bank package links require Pro. Upgrade at /pricing.",
-              needsPro: true,
-            },
-            { status: 402 },
-          );
+        if (!freeMode) {
+          const profile = await fetchOwnProfile(supabase, user.id);
+          const { isPro } = profileToEntitlement(profile);
+          if (!isPro) {
+            return NextResponse.json(
+              {
+                error:
+                  "Shareable bank package links require Pro. Upgrade at /pricing.",
+                needsPro: true,
+              },
+              { status: 402 },
+            );
+          }
         }
       } else {
         return NextResponse.json(
           {
-            error: "Sign in and upgrade to Pro to create share links.",
-            needsPro: true,
+            error: freeMode
+              ? "Sign in to create share links."
+              : "Sign in and upgrade to Pro to create share links.",
+            needsPro: !freeMode,
           },
           { status: 401 },
         );

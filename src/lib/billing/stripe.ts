@@ -14,7 +14,7 @@ export function getStripePriceIdProMonthly(): string | null {
   return process.env.STRIPE_PRICE_ID_PRO_MONTHLY?.trim() || null;
 }
 
-/** TODO(stripe): Team product at $35/mo — wire Checkout when ready. */
+/** Team product at $35/mo (STRIPE_PRICE_ID_TEAM_MONTHLY). */
 export function getStripePriceIdTeamMonthly(): string | null {
   return process.env.STRIPE_PRICE_ID_TEAM_MONTHLY?.trim() || null;
 }
@@ -22,6 +22,13 @@ export function getStripePriceIdTeamMonthly(): string | null {
 export function isStripeConfigured(): boolean {
   return Boolean(getStripeSecretKey() && getStripePriceIdProMonthly());
 }
+
+/** Pro always; Team only when TEAM price env is set. */
+export function isStripeTeamConfigured(): boolean {
+  return Boolean(getStripeSecretKey() && getStripePriceIdTeamMonthly());
+}
+
+export type CheckoutPlanId = "pro" | "team";
 
 export function randomIntegrationSuffix(): string {
   return Math.random().toString(36).slice(2, 10);
