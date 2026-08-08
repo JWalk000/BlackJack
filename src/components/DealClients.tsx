@@ -26,11 +26,11 @@ import {
   upsertCloudDeal,
 } from "@/lib/cloud-deals";
 import { claimTeamInvites, fetchMyTeam, type MyTeam } from "@/lib/teams";
-import { downloadDealExcel } from "@/lib/deal-excel";
+// import { downloadDealExcel } from "@/lib/deal-excel"; // EXCEL_DEAL_IO — re-enable when ready
 import { DealWorkspace } from "./DealWorkspace";
 import { AuthPanel } from "./AuthPanel";
 import { BillingToast, type BillingToastState } from "./BillingToast";
-import { DealExcelButtons } from "./DealExcelButtons";
+// import { DealExcelButtons } from "./DealExcelButtons"; // EXCEL_DEAL_IO — re-enable when ready
 
 const AUTO_SAVE_MS = 500;
 
@@ -316,6 +316,7 @@ export function DealsListClient() {
           >
             New deal
           </Link>
+          {/* EXCEL_DEAL_IO — re-enable when ready
           <DealExcelButtons
             onImported={(d) => {
               setDeals((prev) => {
@@ -325,6 +326,7 @@ export function DealsListClient() {
               router.push(`/deals/${d.id}`);
             }}
           />
+          */}
         </div>
       </div>
 
@@ -447,6 +449,7 @@ export function DealsListClient() {
                   </p>
                 </div>
                 <div className="flex items-center gap-4 sm:shrink-0">
+                  {/* EXCEL_DEAL_IO — re-enable when ready
                   <button
                     type="button"
                     className="inline-flex min-h-11 items-center text-sm font-semibold text-muted transition hover:text-ink"
@@ -454,6 +457,7 @@ export function DealsListClient() {
                   >
                     Excel
                   </button>
+                  */}
                   <Link
                     href={`/deals/${d.id}`}
                     className="inline-flex min-h-11 items-center text-sm font-semibold text-signal transition hover:text-brass-deep"

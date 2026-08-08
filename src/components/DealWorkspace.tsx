@@ -9,7 +9,7 @@ import { money, pct, underwrite } from "@/lib/underwriting";
 import { CostItemizer } from "./CostItemizer";
 import { AddressLookup } from "./AddressLookup";
 import { MarketCompsPanel } from "./MarketCompsPanel";
-import { DealExcelButtons } from "./DealExcelButtons";
+// import { DealExcelButtons } from "./DealExcelButtons"; // EXCEL_DEAL_IO — re-enable when ready
 import {
   Field,
   MoneyInput,
@@ -165,12 +165,14 @@ export function DealWorkspace({
               Saved locally
             </span>
           ) : null}
+          {/* EXCEL_DEAL_IO — re-enable when ready
           <DealExcelButtons
             deal={deal}
             replaceId={deal.id}
             onImported={(next) => onChange(next)}
             compact
           />
+          */}
           <button type="button" onClick={onSave} className="btn-signal w-full sm:w-auto">
             Save deal
           </button>
