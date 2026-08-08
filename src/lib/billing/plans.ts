@@ -1,4 +1,4 @@
-/** Free / Pro / Team product limits for Estate. */
+/** Free / Pro / Team product limits for Arc Estate. */
 
 /** Lifetime free deal creates (not concurrent slots). */
 export const FREE_DEAL_LIMIT = 1;
@@ -127,7 +127,7 @@ export const PLAN_COPY = {
   free: {
     name: "Free",
     priceLabel: "$0",
-    blurb: "Try Estate in this browser.",
+    blurb: "Try Arc Estate in this browser.",
     features: [
       `${FREE_DEAL_LIMIT} deal (local only)`,
       "Full underwriting workspace",

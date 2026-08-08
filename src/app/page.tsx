@@ -3,6 +3,7 @@ import {
   PRO_PRICE_USD_MONTHLY,
   TEAM_PRICE_USD_MONTHLY,
 } from "@/lib/billing/plans";
+import { BRAND_NAME } from "@/lib/brand";
 
 const HERO_IMG =
   "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=2400&q=80";
@@ -105,8 +106,8 @@ export default function HomePage() {
                 Build for the Future
               </p>
 
-              <h1 className="animate-rise-1 mt-2 font-display text-[clamp(3.75rem,16vw,10rem)] leading-[0.88] tracking-tight text-paper">
-                Estate
+              <h1 className="animate-rise-1 mt-2 font-display text-[clamp(2.75rem,12vw,7.5rem)] leading-[0.9] tracking-tight text-paper sm:text-[clamp(3.25rem,14vw,8.5rem)]">
+                {BRAND_NAME}
               </h1>
 
               <div className="animate-draw mt-3.5 h-1 w-28 origin-left bg-signal sm:w-36" />

@@ -29,7 +29,7 @@ function priceIdsInSubscription(sub: Stripe.Subscription): string[] {
 }
 
 /**
- * Map Stripe subscription → Estate plan.
+ * Map Stripe subscription → Arc Estate plan.
  * Team price ID wins when present; otherwise Pro price or metadata; free if not paying.
  */
 function planFromSubscription(

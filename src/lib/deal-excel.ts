@@ -1,5 +1,5 @@
 /**
- * Excel export / import for Estate deals (SheetJS).
+ * Excel export / import for Arc Estate deals (SheetJS).
  * Sheets: Deal (metadata + underwriting) and Costs (line items).
  */
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { BRAND_NAME } from "@/lib/brand";
 import { AuthPanel } from "./AuthPanel";
 
 function NavLink({
@@ -71,7 +72,7 @@ export function SiteHeader() {
       <header className="print:hidden fixed inset-x-0 top-0 z-50 border-b border-line/90 bg-paper/92 text-ink backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5 sm:px-8">
           <Link href="/" className="font-display text-xl tracking-tight">
-            Estate
+            {BRAND_NAME}
           </Link>
           <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
             Shared package
@@ -95,7 +96,7 @@ export function SiteHeader() {
             href="/"
             className="shrink-0 font-display text-2xl tracking-tight transition hover:opacity-90"
           >
-            Estate
+            {BRAND_NAME}
           </Link>
 
           {/* Desktop nav */}
