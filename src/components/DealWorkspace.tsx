@@ -220,7 +220,7 @@ export function DealWorkspace({
       <div className="mt-10">
         {tab === "property" ? (
           <div className="space-y-8">
-            <div className="grid gap-10 lg:grid-cols-2">
+            <div className="grid items-start gap-10 lg:grid-cols-2">
               <section className="panel space-y-5 p-5 sm:p-7">
                 <div>
                   <p className="page-label">Section</p>
