@@ -1,19 +1,18 @@
 "use client";
 
+import { useMemo } from "react";
+import type { Deal } from "@/lib/types";
 import { money } from "@/lib/underwriting";
 import {
   resolveMarketComps,
   type MarketCompsSnapshot,
 } from "@/lib/property-lookup";
-import type { Deal } from "@/lib/types";
-import { useMemo } from "react";
 
 function bandForSf(snapshot: MarketCompsSnapshot, buildingSf: number | null) {
   if (!(buildingSf && buildingSf > 0 && snapshot.medianHomePsf > 0)) {
     return null;
   }
   const mid = Math.round(snapshot.medianHomePsf * buildingSf);
-  // Rough area band: ~85–115% of county median unit price
   return {
     low: Math.round(mid * 0.85),
     mid,
@@ -21,24 +20,40 @@ function bandForSf(snapshot: MarketCompsSnapshot, buildingSf: number | null) {
   };
 }
 
+function propertyLocationLine(deal: Deal): string {
+  const p = deal.property;
+  return [
+    p.address?.trim(),
+    [p.city?.trim(), p.state?.trim(), p.zip?.trim()].filter(Boolean).join(", "),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/**
+ * Area comps always key off Property tab fields (city / state / sf / ARV).
+ * Free $/sf table is Houston-metro today; still show the deal's location when
+ * outside that coverage.
+ */
 export function MarketCompsPanel({ deal }: { deal: Deal }) {
+  const p = deal.property;
+  const location = propertyLocationLine(deal);
+  const hasLocation = Boolean(
+    p.address?.trim() || p.city?.trim() || p.zip?.trim(),
+  );
+
   const snap = useMemo(
     () =>
       resolveMarketComps({
-        city: deal.property.city,
-        state: deal.property.state,
-        buildingSf: deal.property.buildingSf,
+        city: p.city,
+        state: p.state || "TX",
+        buildingSf: p.buildingSf,
         arv: deal.assumptions.arv,
       }),
-    [
-      deal.property.city,
-      deal.property.state,
-      deal.property.buildingSf,
-      deal.assumptions.arv,
-    ],
+    [p.city, p.state, p.buildingSf, deal.assumptions.arv],
   );
 
-  if (!snap) {
+  if (!hasLocation) {
     return (
       <section className="panel space-y-3 p-5 sm:p-6">
         <p className="page-label">Market</p>
@@ -46,19 +61,49 @@ export function MarketCompsPanel({ deal }: { deal: Deal }) {
           Area comps snapshot
         </h2>
         <p className="text-sm text-muted">
-          Add a city (e.g. Houston) or address lookup to load free area $/sf
-          benchmarks. National parcel comps need ATTOM later; this uses public
-          indices where we have them.
+          Fill the address (or city / state / zip) on the{" "}
+          <strong className="font-medium text-ink">Property</strong> tab. This
+          panel pulls from those fields automatically.
         </p>
       </section>
     );
   }
 
-  const band = bandForSf(snap, deal.property.buildingSf);
-  const defaultLabel =
-    !deal.property.city?.trim() && snap.county === "Harris"
-      ? " (default Houston metro)"
-      : "";
+  if (!snap) {
+    return (
+      <section className="panel space-y-4 p-5 sm:p-6">
+        <div>
+          <p className="page-label">Market</p>
+          <h2 className="mt-1 font-display text-xl tracking-tight text-ink sm:text-2xl">
+            Area comps snapshot
+          </h2>
+          <p className="mt-1 text-sm text-muted">{location}</p>
+        </div>
+        <div className="border border-line bg-sand/40 px-4 py-3 text-sm leading-relaxed text-muted">
+          <p className="font-medium text-ink">Location taken from Property</p>
+          <p className="mt-2">
+            Free area $/sf benchmarks currently cover{" "}
+            <strong className="font-medium text-ink">Houston-metro counties</strong>{" "}
+            (ZHVI / public indices). This address is outside that free set, so
+            we cannot show median $/sf here yet.
+          </p>
+          <p className="mt-2">
+            Building SF:{" "}
+            {p.buildingSf != null ? p.buildingSf.toLocaleString() : "—"}
+            {" · "}Tax assessment:{" "}
+            {p.taxAssessment != null ? money(p.taxAssessment) : "—"}
+            {" · "}Year built: {p.yearBuilt != null ? p.yearBuilt : "—"}
+          </p>
+          <p className="mt-2 text-xs">
+            National county comps (and true sale comps) land with ATTOM later.
+            Until then, underwrite with your ARV and local broker data.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  const band = bandForSf(snap, p.buildingSf);
 
   return (
     <section className="panel space-y-4 p-5 sm:p-6">
@@ -68,10 +113,10 @@ export function MarketCompsPanel({ deal }: { deal: Deal }) {
           <h2 className="mt-1 font-display text-xl tracking-tight text-ink sm:text-2xl">
             Area comps snapshot
           </h2>
-          <p className="mt-1 text-sm text-muted">
-            {snap.county} County, {snap.state}
+          <p className="mt-1 text-sm text-muted">{location}</p>
+          <p className="mt-0.5 text-xs text-muted">
+            Benchmarks: {snap.county} County, {snap.state}
             {snap.metro ? ` · ${snap.metro}` : ""}
-            {defaultLabel}
             {snap.asOf && snap.asOf !== "—" ? ` · as of ${snap.asOf}` : ""}
           </p>
         </div>
@@ -94,9 +139,7 @@ export function MarketCompsPanel({ deal }: { deal: Deal }) {
             Area home value (typical)
           </p>
           <p className="mt-1 font-display text-2xl text-ink">
-            {snap.impliedMedianHome
-              ? money(snap.impliedMedianHome)
-              : "—"}
+            {snap.impliedMedianHome ? money(snap.impliedMedianHome) : "—"}
           </p>
           <p className="mt-1 text-[11px] text-muted">
             Median $/sf × typical home size
@@ -130,17 +173,13 @@ export function MarketCompsPanel({ deal }: { deal: Deal }) {
             </span>
           </p>
           <p className="mt-1 text-xs text-muted">
-            Based on {deal.property.buildingSf!.toLocaleString()} sf at ~
-            85–115% of county median $/sf. Use as a reality check for ARV — not
-            a CMA.
+            Based on {p.buildingSf!.toLocaleString()} sf at ~85–115% of county
+            median $/sf. Reality check for ARV — not a CMA.
           </p>
           {snap.dealPsf != null && snap.vsMedianPct != null ? (
             <p className="mt-2 text-sm text-ink">
               Your ARV is{" "}
-              <strong>
-                ${Math.round(snap.dealPsf).toLocaleString()}/sf
-              </strong>{" "}
-              (
+              <strong>${Math.round(snap.dealPsf).toLocaleString()}/sf</strong> (
               {snap.vsMedianPct >= 0 ? "+" : ""}
               {snap.vsMedianPct.toFixed(0)}% vs median)
             </p>
@@ -148,8 +187,8 @@ export function MarketCompsPanel({ deal }: { deal: Deal }) {
         </div>
       ) : (
         <p className="text-sm text-muted">
-          Enter building square feet (and ARV) to see an implied value band
-          against county median $/sf.
+          Set building square feet (and ARV) on Property / Final numbers to
+          compare against county median $/sf.
         </p>
       )}
 
