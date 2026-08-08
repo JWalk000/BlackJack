@@ -337,28 +337,6 @@ function PricingInner() {
             >
               Manage team →
             </button>
-          ) : freeMode ? (
-            <div className="mt-10 space-y-3">
-              <button
-                type="button"
-                className="btn-signal w-full"
-                onClick={() => router.push("/team")}
-              >
-                Create team free →
-              </button>
-              <button
-                type="button"
-                disabled={busy === "team"}
-                className="btn-ghost w-full disabled:opacity-60"
-                onClick={() => void startCheckout("team")}
-              >
-                {busy === "team"
-                  ? "Redirecting…"
-                  : user
-                    ? `Optional — $${TEAM_PRICE_USD_MONTHLY}/mo`
-                    : "Sign in to support early"}
-              </button>
-            </div>
           ) : (
             <button
               type="button"
@@ -369,28 +347,16 @@ function PricingInner() {
               {busy === "team"
                 ? "Redirecting…"
                 : user
-                  ? `Subscribe — $${TEAM_PRICE_USD_MONTHLY}/mo`
+                  ? `$${TEAM_PRICE_USD_MONTHLY}/mo`
                   : "Sign in for Team"}
             </button>
           )}
           <p className="mt-3 text-xs leading-relaxed text-muted">
-            {freeMode ? (
-              <>
-                Early access: create at{" "}
-                <Link href="/team" className="font-medium text-signal">
-                  /team
-                </Link>
-                . Paid Team later when billing turns on.
-              </>
-            ) : (
-              <>
-                Pay first, then create your team at{" "}
-                <Link href="/team" className="font-medium text-signal">
-                  /team
-                </Link>
-                . Members keep Free personal limits; team deals are shared.
-              </>
-            )}
+            Pay via Stripe, then set up your workspace at{" "}
+            <Link href="/team" className="font-medium text-signal">
+              /team
+            </Link>
+            . Members keep Free personal limits; team deals are shared.
           </p>
         </section>
       </div>
