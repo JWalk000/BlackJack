@@ -10,6 +10,7 @@ import {
   formatStripeUserError,
   describeStripeKeyProblem,
   getStripeSecretKey,
+  assertStripePriceId,
   type CheckoutPlanId,
 } from "@/lib/billing/stripe";
 import {
@@ -36,6 +37,7 @@ function preservePlan(plan: PlanId | undefined): PlanId {
 }
 
 export async function POST(request: Request) {
+  let checkoutPlan: CheckoutPlanId = "pro";
   try {
     if (!isStripeConfigured()) {
       const keyProblem = describeStripeKeyProblem(getStripeSecretKey());
@@ -51,7 +53,6 @@ export async function POST(request: Request) {
     }
     const { supabase, user } = auth;
 
-    let checkoutPlan: CheckoutPlanId = "pro";
     try {
       const body = (await request.json()) as { plan?: string };
       if (body?.plan === "team") checkoutPlan = "team";
@@ -73,6 +74,9 @@ export async function POST(request: Request) {
         : getStripePriceIdProMonthly()!;
 
     const stripe = getStripe();
+    // Fail fast with plan-specific copy if Team/Pro price id is for wrong account
+    await assertStripePriceId(priceId, checkoutPlan);
+
     const appUrl = getAppUrl(request);
 
     let profile = await fetchOwnProfile(supabase, user.id);
@@ -141,7 +145,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url, sessionId: session.id });
   } catch (e) {
-    const msg = formatStripeUserError(e);
+    const msg = formatStripeUserError(e, { plan: checkoutPlan });
     console.error("[stripe/checkout]", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

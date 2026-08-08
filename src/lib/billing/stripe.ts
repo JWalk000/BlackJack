@@ -91,7 +91,10 @@ export function getStripe(): Stripe {
 }
 
 /** Map raw Stripe SDK errors to actionable copy for the UI. */
-export function formatStripeUserError(err: unknown): string {
+export function formatStripeUserError(
+  err: unknown,
+  context?: { plan?: CheckoutPlanId },
+): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (/publishable API key/i.test(msg) || /publishable key/i.test(msg)) {
     return (
@@ -99,14 +102,60 @@ export function formatStripeUserError(err: unknown): string {
       "Stripe secret key is misconfigured (publishable key used as secret)."
     );
   }
-  if (/No such price/i.test(msg)) {
+  if (
+    /No such price/i.test(msg) ||
+    (/resource_missing/i.test(msg) && /price/i.test(msg)) ||
+    /Team price ID is wrong/i.test(msg) ||
+    /Pro price ID is wrong/i.test(msg)
+  ) {
+    const plan = context?.plan;
+    if (plan === "team" || /Team price ID is wrong/i.test(msg)) {
+      return (
+        "Team price ID is wrong for this Stripe account. In Stripe → Product catalog → Estate Team, " +
+        "open the $35/mo price and copy Price ID (price_…). Put it in Vercel as STRIPE_PRICE_ID_TEAM_MONTHLY " +
+        "(not PRO), then redeploy. Pro and Team each need their own price_ id."
+      );
+    }
+    if (plan === "pro" || /Pro price ID is wrong/i.test(msg)) {
+      return (
+        "Pro price ID is wrong for this Stripe account. Copy Estate Pro’s $15/mo Price ID (price_…) into " +
+        "STRIPE_PRICE_ID_PRO_MONTHLY on Vercel, then redeploy."
+      );
+    }
     return (
       "Stripe price ID is wrong or for a different account. " +
-      "Check STRIPE_PRICE_ID_PRO_MONTHLY / TEAM_MONTHLY match this secret key's account."
+      "Check STRIPE_PRICE_ID_PRO_MONTHLY / STRIPE_PRICE_ID_TEAM_MONTHLY match this secret key's account."
     );
   }
   return msg || "Stripe request failed";
 }
+
+/**
+ * Confirm price exists under the current secret key (clearer than Checkout “No such price”).
+ */
+export async function assertStripePriceId(
+  priceId: string,
+  plan: CheckoutPlanId,
+): Promise<void> {
+  const stripe = getStripe();
+  try {
+    const price = await stripe.prices.retrieve(priceId);
+    if (!price.active) {
+      throw new Error(
+        plan === "team"
+          ? "Team price exists but is inactive in Stripe. Activate it or choose another $35 price."
+          : "Pro price exists but is inactive in Stripe. Activate it or choose another $15 price.",
+      );
+    }
+  } catch (e) {
+    const raw = e instanceof Error ? e.message : String(e);
+    if (/No such price/i.test(raw) || /resource_missing/i.test(raw)) {
+      throw new Error(formatStripeUserError(e, { plan }));
+    }
+    throw e instanceof Error ? e : new Error(String(e));
+  }
+}
+
 
 export function getAppUrl(request?: Request): string {
   const fromEnv =
