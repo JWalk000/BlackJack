@@ -98,7 +98,7 @@ RPCs the app expects (PostgREST arg names must match):
 - **Pro** signed-in users: saves write to `user_deals` and `localStorage`.
 - **Free** (guest or signed-in): local only, max 3 deals; **team members** also see deals with `team_id` set.
 - **My deals** merges cloud + browser when Pro **or** on a team.
-- After sign-in, pending invites matching email or phone are claimed automatically.
+- After sign-in, pending invites matching email are claimed automatically.
 - Sign out clears the session; local cache remains until cleared.
 
 ## Stripe billing (Pro)

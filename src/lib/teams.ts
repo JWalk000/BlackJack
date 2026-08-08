@@ -34,7 +34,7 @@ export type MyTeam = {
   isOwner: boolean;
 };
 
-export { normalizeEmail, normalizePhone, displayContact };
+export { normalizeEmail, displayContact };
 
 /** Map PostgREST/schema-cache errors to actionable messages. */
 export function mapTeamRpcError(message: string): string {
@@ -57,7 +57,7 @@ export function mapTeamRpcError(message: string): string {
   return m;
 }
 
-/** Attach pending invites that match the signed-in user's email or phone. */
+/** Attach pending invites that match the signed-in user's email. */
 export async function claimTeamInvites(
   sb?: SupabaseClient | null,
 ): Promise<number> {
