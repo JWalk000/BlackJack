@@ -46,7 +46,7 @@ export type Financing = {
 export type DealAssumptions = {
   purchasePrice: number;
   closingCosts: number;
-  /** When true, user overrode closing $; don't auto-apply 4% of purchase */
+  /** When true, user overrode closing $; don't auto-apply 4% of exit value */
   closingCostsManual: boolean;
   projectMonths: number;
   monthsToSaleOrRent: number;

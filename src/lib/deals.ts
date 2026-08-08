@@ -51,10 +51,13 @@ export function emptyAssumptions() {
   };
 }
 
-/** 4% of purchase unless locked by manual edit */
-export function defaultClosingCosts(purchasePrice: number): number {
-  return Math.round((Number(purchasePrice) || 0) * 0.04);
+/** 4% of exit value (ARV) or other $ basis unless locked by manual edit */
+export function defaultClosingCosts(basis: number): number {
+  return Math.round((Number(basis) || 0) * 0.04);
 }
+
+export const CLOSING_COSTS_PCT = 0.04;
+
 
 export function emptyFinancing() {
   return {

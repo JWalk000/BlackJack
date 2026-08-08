@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import type { BuildMode, Deal, PropertyClass } from "@/lib/types";
 import { DEFAULT_PROPERTY_TYPES } from "@/lib/types";
-import { costsAreBlank, templateCostItems } from "@/lib/deals";
+import { costsAreBlank, defaultClosingCosts, templateCostItems } from "@/lib/deals";
 import { money, pct, underwrite } from "@/lib/underwriting";
 import { CostItemizer } from "./CostItemizer";
 import { AddressLookup } from "./AddressLookup";
@@ -565,15 +565,25 @@ export function DealWorkspace({
                 >
                   <MoneyInput
                     value={deal.assumptions.arv}
-                    onChange={(arv) => patchAssumptions({ arv })}
+                    onChange={(arv) => {
+                      const next: Partial<typeof deal.assumptions> = { arv };
+                      if (!deal.assumptions.closingCostsManual) {
+                        next.closingCosts = defaultClosingCosts(arv);
+                      }
+                      patchAssumptions(next);
+                    }}
                   />
                 </Field>
                 <Field
                   label="Closing costs"
-                  hint="Fees at acquire/close — edit anytime (exclude if already in costs)"
+                  hint="Defaults to 4% of exit value — edit to override"
                 >
                   <MoneyInput
-                    value={deal.assumptions.closingCosts}
+                    value={
+                      deal.assumptions.closingCostsManual
+                        ? deal.assumptions.closingCosts
+                        : defaultClosingCosts(deal.assumptions.arv)
+                    }
                     onChange={(closingCosts) =>
                       patchAssumptions({
                         closingCosts,

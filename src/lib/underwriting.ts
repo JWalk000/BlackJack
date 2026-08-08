@@ -69,10 +69,12 @@ export function underwrite(deal: Deal): UnderwritingResult {
   const a: DealAssumptions = deal.assumptions;
   const f: Financing = deal.financing;
   const buildBudget = sumCostItems(deal.costItems);
+  // Auto closing: 4% of exit value (ARV) when user has not overridden
+  const closingCosts = a.closingCostsManual
+    ? a.closingCosts || 0
+    : Math.round((a.arv || 0) * 0.04);
   const baseCapital =
-    (a.purchasePrice || 0) +
-    (a.closingCosts || 0) +
-    buildBudget;
+    (a.purchasePrice || 0) + closingCosts + buildBudget;
 
   const ltv = f.style === "all_cash" ? 0 : Math.min(100, Math.max(0, f.ltvPct)) / 100;
   const basisForLoan = (a.purchasePrice || 0) + buildBudget;
