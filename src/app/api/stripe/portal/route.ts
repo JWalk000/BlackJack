@@ -1,17 +1,28 @@
 import { NextResponse } from "next/server";
-import { getAppUrl, getStripe, isStripeConfigured } from "@/lib/billing/stripe";
+import {
+  getAppUrl,
+  getStripe,
+  isStripeConfigured,
+  formatStripeUserError,
+  describeStripeKeyProblem,
+  getStripeSecretKey,
+} from "@/lib/billing/stripe";
 import { resolveRequestAuth } from "@/lib/supabase/server";
 import { fetchOwnProfile } from "@/lib/billing/profiles";
 
 export const runtime = "nodejs";
 
 const BILLING_NOT_CONFIGURED =
-  "Billing not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID_PRO_MONTHLY on the server (e.g. Vercel env).";
+  "Billing not configured. Set STRIPE_SECRET_KEY (sk_live_… or sk_test_…) and STRIPE_PRICE_ID_PRO_MONTHLY on the server.";
 
 export async function POST(request: Request) {
   try {
     if (!isStripeConfigured()) {
-      return NextResponse.json({ error: BILLING_NOT_CONFIGURED }, { status: 503 });
+      const keyProblem = describeStripeKeyProblem(getStripeSecretKey());
+      return NextResponse.json(
+        { error: keyProblem || BILLING_NOT_CONFIGURED },
+        { status: 503 },
+      );
     }
 
     const auth = await resolveRequestAuth(request);
@@ -55,7 +66,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Portal failed";
+    const msg = formatStripeUserError(e);
     console.error("[stripe/portal]", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

@@ -7,6 +7,9 @@ import {
   isStripeConfigured,
   isStripeTeamConfigured,
   randomIntegrationSuffix,
+  formatStripeUserError,
+  describeStripeKeyProblem,
+  getStripeSecretKey,
   type CheckoutPlanId,
 } from "@/lib/billing/stripe";
 import {
@@ -22,7 +25,7 @@ import type { PlanId } from "@/lib/billing/plans";
 export const runtime = "nodejs";
 
 const BILLING_NOT_CONFIGURED =
-  "Billing not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID_PRO_MONTHLY on the server (e.g. Vercel env).";
+  "Billing not configured. Set STRIPE_SECRET_KEY (sk_live_… or sk_test_…) and STRIPE_PRICE_ID_PRO_MONTHLY on the server (e.g. Vercel env).";
 
 const TEAM_BILLING_NOT_CONFIGURED =
   "Team billing not configured. Set STRIPE_PRICE_ID_TEAM_MONTHLY on the server (Team product $35/mo).";
@@ -35,7 +38,11 @@ function preservePlan(plan: PlanId | undefined): PlanId {
 export async function POST(request: Request) {
   try {
     if (!isStripeConfigured()) {
-      return NextResponse.json({ error: BILLING_NOT_CONFIGURED }, { status: 503 });
+      const keyProblem = describeStripeKeyProblem(getStripeSecretKey());
+      return NextResponse.json(
+        { error: keyProblem || BILLING_NOT_CONFIGURED },
+        { status: 503 },
+      );
     }
 
     const auth = await resolveRequestAuth(request);
@@ -134,7 +141,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url, sessionId: session.id });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Checkout failed";
+    const msg = formatStripeUserError(e);
     console.error("[stripe/checkout]", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
