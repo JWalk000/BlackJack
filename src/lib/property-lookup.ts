@@ -1,8 +1,8 @@
-/**
+﻿/**
  * Free property lookup for deal autofill.
  * Prefer free-leads CAD cache; optionally live HCAD/FBCAD address match;
  * Census geocoder for US address parse; ZHVI area comps for market context.
- * ATTOM-ready: swap provider later without changing PropertyInfo fields.
+ * Optional RentCast when RENTCAST_API_KEY is set.
  */
 
 import type { PropertyInfo } from "@/lib/types";
@@ -12,11 +12,13 @@ import {
   type FreeLeadListing,
 } from "@/data/listings";
 import {
-  findAreaComp,
-  formatZhviAsOf,
-  getAreaCompsMeta,
-  type AreaComp,
-} from "@/data/area-comps";
+  resolveMarketCompsFree,
+  type MarketCompsSnapshot,
+} from "@/lib/market-comps";
+import { guessCounty } from "@/lib/tx-counties";
+
+export type { MarketCompsSnapshot };
+export { guessCounty };
 
 export type PropertySuggestion = {
   id: string;
@@ -27,76 +29,20 @@ export type PropertySuggestion = {
   state: string;
   zip: string;
   provider?: string;
-  /** Assessed / market value when known */
   taxAssessment?: number | null;
   buildingSf?: number | null;
   lotSf?: number | null;
   yearBuilt?: number | null;
   apn?: string;
-  source: "free-cad" | "hcad-live" | "fbcad-live" | "sample" | "census";
+  source:
+    | "free-cad"
+    | "hcad-live"
+    | "fbcad-live"
+    | "sample"
+    | "census"
+    | "rentcast";
   notes?: string;
 };
-
-export type MarketCompsSnapshot = {
-  county: string;
-  state: string;
-  metro?: string;
-  medianHomePsf: number;
-  /** Implied median home ~ typical SF × $/sf when ZHVI/typical SF known */
-  impliedMedianHome?: number | null;
-  avgLandPerAcre: number;
-  zhvi?: number;
-  asOf: string;
-  disclaimer: string;
-  homeSource?: string;
-  fhfaYoyPct?: number | null;
-  /** Deal ARV vs county $/sf for building sf */
-  dealPsf?: number | null;
-  vsMedianPct?: number | null;
-};
-
-const CITY_COUNTY: Record<string, string> = {
-  houston: "Harris",
-  pasadena: "Harris",
-  "bellaire": "Harris",
-  "west university place": "Harris",
-  "west u": "Harris",
-  spring: "Harris",
-  cypress: "Harris",
-  kite: "Harris",
-  kate: "Harris",
-  kaly: "Harris",
-  katy: "Harris",
-  humble: "Harris",
-  baytown: "Harris",
-  "jersey village": "Harris",
-  tomball: "Harris",
-  alief: "Harris",
-  sugarland: "Fort Bend",
-  "sugar land": "Fort Bend",
-  missouri: "Fort Bend",
-  "missouri city": "Fort Bend",
-  stafford: "Fort Bend",
-  richmond: "Fort Bend",
-  rosenberg: "Fort Bend",
-  "the woodlands": "Montgomery",
-  conroe: "Montgomery",
-  magnolia: "Montgomery",
-  pearland: "Brazoria",
-  alvin: "Brazoria",
-  league: "Galveston",
-  "league city": "Galveston",
-  galveston: "Galveston",
-  friendswood: "Galveston",
-  waller: "Waller",
-  brookshire: "Waller",
-};
-
-export function guessCounty(city: string, state = "TX"): string | null {
-  if (!city || state.toUpperCase() !== "TX") return null;
-  const key = city.trim().toLowerCase();
-  return CITY_COUNTY[key] ?? null;
-}
 
 function normalizeAddr(s: string): string {
   return s
@@ -115,7 +61,6 @@ function normalizeAddr(s: string): string {
 function listingToSuggestion(l: FreeLeadListing): PropertySuggestion {
   const lotSf =
     l.acres != null && l.acres > 0 ? Math.round(l.acres * 43560) : null;
-  // Year built may appear in notes from FBCAD pull (e.g. "YearBuilt: 1984")
   let yearBuilt: number | null = null;
   const yearMatch = (l.notes || "").match(/(?:year\s*built|built)[:\s]+(\d{4})/i);
   if (yearMatch) {
@@ -153,7 +98,6 @@ export function searchFreeLeads(query: string, limit = 8): PropertySuggestion[] 
   const tokens = q.split(" ").filter((t) => t.length > 1);
   const scored: { score: number; s: PropertySuggestion }[] = [];
 
-  // Real CAD cache only (no demo SAMPLE_LISTINGS)
   const inventory =
     getFreeCadListings().length > 0
       ? getFreeCadListings()
@@ -311,11 +255,7 @@ export async function censusGeocode(
     const match = data.result?.addressMatches?.[0];
     if (!match?.matchedAddress) return null;
     const c = match.addressComponents || {};
-    const street = [
-      c.fromAddress,
-      c.streetName,
-      c.suffixType,
-    ]
+    const street = [c.fromAddress, c.streetName, c.suffixType]
       .filter(Boolean)
       .join(" ");
     const city = c.city || "";
@@ -347,7 +287,6 @@ export async function combinedSuggest(
   const push = (s: PropertySuggestion) => {
     const k = s.label.toLowerCase();
     if (ids.has(k)) return;
-    // Never surface demo samples as "real" lookups
     if (s.source === "sample") return;
     out.push(s);
     ids.add(k);
@@ -355,14 +294,26 @@ export async function combinedSuggest(
 
   for (const s of local) push(s);
 
-  // Always try live HCAD for number+street patterns (real assessor)
   const hcad = await searchHcadLive(query, 6);
   for (const s of hcad) push(s);
 
-  // Census for nationwide address structure when nothing/local thin
   if (out.length < 3) {
     const geo = await censusGeocode(query);
     if (geo) push(geo);
+  }
+
+  if (out.length < 2) {
+    try {
+      const { hasRentCastKey, rentcastPropertyToSuggestion } = await import(
+        "@/lib/rentcast-suggest",
+      );
+      if (hasRentCastKey()) {
+        const rc = await rentcastPropertyToSuggestion(query);
+        if (rc) push(rc);
+      }
+    } catch {
+      /* optional */
+    }
   }
 
   return out.slice(0, 10);
@@ -388,51 +339,14 @@ export function suggestionToPropertyPatch(
   return patch;
 }
 
+/** Sync free resolve (ZHVI zip/county). API route adds RentCast when needed. */
 export function resolveMarketComps(input: {
   city?: string;
   state?: string;
+  zip?: string;
   county?: string;
   buildingSf?: number | null;
   arv?: number | null;
 }): MarketCompsSnapshot | null {
-  const state = (input.state || "TX").toUpperCase();
-  const county =
-    input.county ||
-    guessCounty(input.city || "", state) ||
-    (state === "TX" ? "Harris" : null);
-  if (!county) return null;
-  const comp: AreaComp | null = findAreaComp(county, state);
-  if (!comp) return null;
-  const meta = getAreaCompsMeta();
-  const typicalSf = meta.typicalHomeSf || 1900;
-  const impliedMedianHome = Math.round(comp.medianHomePsf * typicalSf);
-  const dealPsf =
-    input.buildingSf &&
-    input.buildingSf > 0 &&
-    input.arv != null &&
-    input.arv > 0
-      ? input.arv / input.buildingSf
-      : null;
-  const vsMedianPct =
-    dealPsf != null && comp.medianHomePsf > 0
-      ? ((dealPsf - comp.medianHomePsf) / comp.medianHomePsf) * 100
-      : null;
-
-  return {
-    county: comp.county,
-    state: comp.state,
-    metro: comp.metro,
-    medianHomePsf: comp.medianHomePsf,
-    impliedMedianHome,
-    avgLandPerAcre: comp.avgLandPerAcre,
-    zhvi: comp.zhvi,
-    asOf: formatZhviAsOf(meta.asOf),
-    disclaimer:
-      meta.disclaimer ||
-      "Area medians from free public indices — not MLS comps or an appraisal.",
-    homeSource: comp.homeSource,
-    fhfaYoyPct: meta.fhfa?.yoyPct ?? null,
-    dealPsf,
-    vsMedianPct,
-  };
+  return resolveMarketCompsFree(input);
 }

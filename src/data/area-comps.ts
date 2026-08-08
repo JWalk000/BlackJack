@@ -2,10 +2,12 @@
  * Area market benchmarks for deal screening.
  *
  * Prefer live snapshot from `npm run data:pull` (ZHVI county $/sf + CAD land medians).
+ * ZIP index from ZIP ZHVI for nationwide Property-tab market panel.
  * Fall back to static Houston-metro defaults when generated file is empty.
  */
 
 import areaCompsLive from "@/data/generated/area-comps-live.json";
+import zipZhviLive from "@/data/generated/zip-zhvi-live.json";
 
 export type AreaComp = {
   county: string;
@@ -42,6 +44,21 @@ export type AreaCompsMeta = {
   } | null;
 };
 
+export type ZipZhviHit = {
+  zip: string;
+  zhvi: number;
+  medianHomePsf: number;
+};
+
+export type ZipZhviMeta = {
+  provider: string | null;
+  source: string | null;
+  asOf: string | null;
+  typicalHomeSf: number;
+  disclaimer: string | null;
+  count: number;
+};
+
 type LiveFile = {
   provider?: string | null;
   source?: string | null;
@@ -70,7 +87,18 @@ type LiveFile = {
   fhfa?: AreaCompsMeta["fhfa"];
 };
 
+type ZipLiveFile = {
+  provider?: string | null;
+  source?: string | null;
+  asOf?: string | null;
+  typicalHomeSf?: number | null;
+  disclaimer?: string | null;
+  count?: number;
+  zips?: Record<string, number>;
+};
+
 const live = areaCompsLive as LiveFile;
+const zipLive = zipZhviLive as ZipLiveFile;
 
 /** Static fallback when free pull has not produced counties yet. */
 const FALLBACK_AREA_COMPS: AreaComp[] = [
@@ -136,8 +164,8 @@ function liveCounties(): AreaComp[] {
     county: c.county,
     state: c.state,
     medianHomePsf: c.medianHomePsf,
-    avgLandPerAcre: c.avgLandPerAcre,
-    metro: c.metro ?? "Houston",
+    avgLandPerAcre: c.avgLandPerAcre ?? 0,
+    metro: c.metro,
     zhvi: c.zhvi,
     landSource: c.landSource,
     landSampleSize: c.landSampleSize,
@@ -150,6 +178,25 @@ function liveCounties(): AreaComp[] {
 /** Active comps table: live ZHVI/CAD when present, else fallbacks. */
 export const AREA_COMPS: AreaComp[] =
   liveCounties().length > 0 ? liveCounties() : FALLBACK_AREA_COMPS;
+
+const HOUSTON_COUNTY_KEYS = new Set([
+  "harris",
+  "fort bend",
+  "montgomery",
+  "brazoria",
+  "galveston",
+  "waller",
+]);
+
+/** Houston-metro subset for Deal Finder screens (not the full US list). */
+export function houstonAreaComps(): AreaComp[] {
+  const hit = AREA_COMPS.filter(
+    (c) =>
+      c.state.toUpperCase() === "TX" &&
+      HOUSTON_COUNTY_KEYS.has(normalizeCountyKey(c.county)),
+  );
+  return hit.length > 0 ? hit : FALLBACK_AREA_COMPS;
+}
 
 export function hasLiveAreaComps(): boolean {
   return liveCounties().length > 0;
@@ -171,6 +218,21 @@ export function getAreaCompsMeta(): AreaCompsMeta {
   };
 }
 
+export function getZipZhviMeta(): ZipZhviMeta {
+  const typical =
+    typeof zipLive.typicalHomeSf === "number" && zipLive.typicalHomeSf > 0
+      ? zipLive.typicalHomeSf
+      : 1900;
+  return {
+    provider: zipLive.provider ?? null,
+    source: zipLive.source ?? null,
+    asOf: zipLive.asOf ?? null,
+    typicalHomeSf: typical,
+    disclaimer: zipLive.disclaimer ?? null,
+    count: zipLive.count ?? Object.keys(zipLive.zips || {}).length,
+  };
+}
+
 /** Home deal hurdle: list $/sf must be ≤ this fraction of area median. */
 export const HOME_DEAL_THRESHOLD =
   typeof live.homeDealThreshold === "number" && live.homeDealThreshold > 0
@@ -182,6 +244,7 @@ export function normalizeCountyKey(county: string): string {
     .trim()
     .toLowerCase()
     .replace(/\s+county$/i, "")
+    .replace(/\s+parish$/i, "")
     .replace(/\s+/g, " ");
 }
 
@@ -196,9 +259,24 @@ export function findAreaComp(county: string, state = "TX"): AreaComp | null {
   );
 }
 
-/** Default table when user has no custom overrides. */
+/** ZIP-level ZHVI → median $/sf using typical home size. */
+export function findZipZhvi(zip: string): ZipZhviHit | null {
+  const z = zip.replace(/\D/g, "").slice(0, 5);
+  if (z.length !== 5) return null;
+  const map = zipLive.zips || {};
+  const zhvi = map[z];
+  if (!(typeof zhvi === "number" && zhvi > 0)) return null;
+  const typical = getZipZhviMeta().typicalHomeSf;
+  return {
+    zip: z,
+    zhvi,
+    medianHomePsf: Math.round(zhvi / typical),
+  };
+}
+
+/** Default table for Deal Finder (Houston only). */
 export function defaultCompsTable(): AreaComp[] {
-  return AREA_COMPS.map((c) => ({ ...c }));
+  return houstonAreaComps().map((c) => ({ ...c }));
 }
 
 /** ZHVI period label, e.g. "Jun 2026". */

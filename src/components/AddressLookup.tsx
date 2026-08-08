@@ -25,6 +25,8 @@ function sourceLabel(s: PropertySuggestion["source"]) {
       return "Open CAD cache";
     case "census":
       return "US Census address";
+    case "rentcast":
+      return "RentCast records";
     case "sample":
       return "Sample";
     default:
@@ -169,9 +171,8 @@ export function AddressLookup({
         <p className="text-xs leading-relaxed text-muted">{hint}</p>
       ) : (
         <p className="text-xs text-muted">
-          Real public data only: Houston-area CAD parcels and assessor values when
-          matched; US Census for nationwide street parse. Not MLS. Beds/baths often
-          require manual entry.
+          Free first: Houston CAD + US Census. Optional RentCast nationwide when
+          an API key is configured. Not MLS. Beds/baths often need manual entry.
         </p>
       )}
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Deal } from "@/lib/types";
 import { money } from "@/lib/underwriting";
 import {
@@ -31,9 +31,8 @@ function propertyLocationLine(deal: Deal): string {
 }
 
 /**
- * Area comps always key off Property tab fields (city / state / sf / ARV).
- * Free $/sf table is Houston-metro today; still show the deal's location when
- * outside that coverage.
+ * Area comps from Property tab. Free ZHVI zip/county first;
+ * optional RentCast via API when key set and free miss.
  */
 export function MarketCompsPanel({ deal }: { deal: Deal }) {
   const p = deal.property;
@@ -42,16 +41,58 @@ export function MarketCompsPanel({ deal }: { deal: Deal }) {
     p.address?.trim() || p.city?.trim() || p.zip?.trim(),
   );
 
-  const snap = useMemo(
+  const localSnap = useMemo(
     () =>
       resolveMarketComps({
         city: p.city,
         state: p.state || "TX",
+        zip: p.zip,
         buildingSf: p.buildingSf,
         arv: deal.assumptions.arv,
       }),
-    [p.city, p.state, p.buildingSf, deal.assumptions.arv],
+    [p.city, p.state, p.zip, p.buildingSf, deal.assumptions.arv],
   );
+
+  const [snap, setSnap] = useState<MarketCompsSnapshot | null>(localSnap);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setSnap(localSnap);
+    if (localSnap || !hasLocation) return;
+
+    const ac = new AbortController();
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (p.city) params.set("city", p.city);
+    if (p.state) params.set("state", p.state);
+    if (p.zip) params.set("zip", p.zip);
+    if (p.address) params.set("address", p.address);
+    if (p.buildingSf != null) params.set("buildingSf", String(p.buildingSf));
+    if (deal.assumptions.arv != null) {
+      params.set("arv", String(deal.assumptions.arv));
+    }
+    void fetch(`/api/property/market?${params}`, { signal: ac.signal })
+      .then((r) => r.json())
+      .then((data: { snapshot?: MarketCompsSnapshot | null }) => {
+        if (!ac.signal.aborted && data.snapshot) setSnap(data.snapshot);
+      })
+      .catch(() => {
+        /* keep null */
+      })
+      .finally(() => {
+        if (!ac.signal.aborted) setLoading(false);
+      });
+    return () => ac.abort();
+  }, [
+    localSnap,
+    hasLocation,
+    p.city,
+    p.state,
+    p.zip,
+    p.address,
+    p.buildingSf,
+    deal.assumptions.arv,
+  ]);
 
   if (!hasLocation) {
     return (
@@ -81,29 +122,43 @@ export function MarketCompsPanel({ deal }: { deal: Deal }) {
         </div>
         <div className="border border-line bg-sand/40 px-4 py-3 text-sm leading-relaxed text-muted">
           <p className="font-medium text-ink">Location taken from Property</p>
-          <p className="mt-2">
-            Free area $/sf benchmarks currently cover{" "}
-            <strong className="font-medium text-ink">Houston-metro counties</strong>{" "}
-            (ZHVI / public indices). This address is outside that free set, so
-            we cannot show median $/sf here yet.
-          </p>
-          <p className="mt-2">
-            Building SF:{" "}
-            {p.buildingSf != null ? p.buildingSf.toLocaleString() : "—"}
-            {" · "}Tax assessment:{" "}
-            {p.taxAssessment != null ? money(p.taxAssessment) : "—"}
-            {" · "}Year built: {p.yearBuilt != null ? p.yearBuilt : "—"}
-          </p>
-          <p className="mt-2 text-xs">
-            National county comps (and true sale comps) land with ATTOM later.
-            Until then, underwrite with your ARV and local broker data.
-          </p>
+          {loading ? (
+            <p className="mt-2">Looking up free ZIP / county benchmarks…</p>
+          ) : (
+            <>
+              <p className="mt-2">
+                No free ZHVI index for this ZIP yet. Run{" "}
+                <code className="text-ink">npm run data:pull</code>, or set{" "}
+                <code className="text-ink">RENTCAST_API_KEY</code> for paid ZIP
+                market stats.
+              </p>
+              <p className="mt-2">
+                Building SF:{" "}
+                {p.buildingSf != null ? p.buildingSf.toLocaleString() : "—"}
+                {" · "}Tax assessment:{" "}
+                {p.taxAssessment != null ? money(p.taxAssessment) : "—"}
+                {" · "}Year built: {p.yearBuilt != null ? p.yearBuilt : "—"}
+              </p>
+            </>
+          )}
         </div>
       </section>
     );
   }
 
   const band = bandForSf(snap, p.buildingSf);
+  const geo =
+    snap.geographyLabel ||
+    [
+      snap.county && !/^\d{5}$/.test(snap.county)
+        ? `${snap.county} County`
+        : snap.zip
+          ? `ZIP ${snap.zip}`
+          : snap.county,
+      snap.state,
+    ]
+      .filter(Boolean)
+      .join(", ");
 
   return (
     <section className="panel space-y-4 p-5 sm:p-6">
@@ -115,9 +170,10 @@ export function MarketCompsPanel({ deal }: { deal: Deal }) {
           </h2>
           <p className="mt-1 text-sm text-muted">{location}</p>
           <p className="mt-0.5 text-xs text-muted">
-            Benchmarks: {snap.county} County, {snap.state}
+            Benchmarks: {geo}
             {snap.metro ? ` · ${snap.metro}` : ""}
             {snap.asOf && snap.asOf !== "—" ? ` · as of ${snap.asOf}` : ""}
+            {snap.provider ? ` · ${snap.provider}` : ""}
           </p>
         </div>
       </div>
@@ -142,7 +198,7 @@ export function MarketCompsPanel({ deal }: { deal: Deal }) {
             {snap.impliedMedianHome ? money(snap.impliedMedianHome) : "—"}
           </p>
           <p className="mt-1 text-[11px] text-muted">
-            Median $/sf × typical home size
+            Index / market median home value
           </p>
         </div>
         <div className="bg-surface px-4 py-3">
@@ -150,9 +206,13 @@ export function MarketCompsPanel({ deal }: { deal: Deal }) {
             Avg land $/acre
           </p>
           <p className="mt-1 font-display text-2xl text-ink">
-            {money(snap.avgLandPerAcre)}
+            {snap.avgLandPerAcre > 0 ? money(snap.avgLandPerAcre) : "—"}
           </p>
-          {snap.fhfaYoyPct != null ? (
+          {snap.avgLandPerAcre <= 0 ? (
+            <p className="mt-1 text-[11px] text-muted">
+              Houston free CAD only
+            </p>
+          ) : snap.fhfaYoyPct != null ? (
             <p className="mt-1 text-[11px] text-muted">
               FHFA metro YoY {snap.fhfaYoyPct > 0 ? "+" : ""}
               {snap.fhfaYoyPct.toFixed(1)}%
@@ -173,7 +233,7 @@ export function MarketCompsPanel({ deal }: { deal: Deal }) {
             </span>
           </p>
           <p className="mt-1 text-xs text-muted">
-            Based on {p.buildingSf!.toLocaleString()} sf at ~85–115% of county
+            Based on {p.buildingSf!.toLocaleString()} sf at ~85–115% of area
             median $/sf. Reality check for ARV — not a CMA.
           </p>
           {snap.dealPsf != null && snap.vsMedianPct != null ? (
@@ -188,7 +248,7 @@ export function MarketCompsPanel({ deal }: { deal: Deal }) {
       ) : (
         <p className="text-sm text-muted">
           Set building square feet (and ARV) on Property / Final numbers to
-          compare against county median $/sf.
+          compare against area median $/sf.
         </p>
       )}
 

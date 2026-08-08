@@ -9,6 +9,7 @@
     "lint": "eslint",
     "data:pull": "node scripts/data/pull-market-data.mjs",
     "data:pull:hpi": "node scripts/data/pull-market-data.mjs --skip-parcels",
+    "data:pull:indices": "node scripts/data/pull-market-data.mjs --skip-parcels",
     "data:pull:parcels": "node scripts/data/pull-market-data.mjs --skip-hpi",
     "db:apply-teams": "node scripts/apply-teams-sql.mjs"
   },

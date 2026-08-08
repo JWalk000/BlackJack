@@ -2,24 +2,27 @@
  * Pull free public market data for Estate Deal Finder.
  *
  * Sources (not MLS scrapers; not ATTOM):
- * 1. Zillow Research ZHVI county CSV (open research files) → home $/sf benchmarks
- * 2. Harris CAD parcels (public ArcGIS) → free-cad lead sample
- * 3. Fort Bend CAD parcels (public ArcGIS)
- * 4. FHFA HPI (optional metro trend signal in cache)
+ * 1. Zillow Research ZHVI county CSV → nationwide home $/sf benchmarks
+ * 2. Zillow Research ZHVI zip CSV → ZIP-level $/sf for property-tab markets
+ * 3. Harris CAD parcels (public ArcGIS) → free-cad lead sample
+ * 4. Fort Bend CAD parcels (public ArcGIS)
+ * 5. FHFA HPI (optional Houston metro trend signal in cache)
  *
  * Usage:
  *   npm run data:pull
  *   node scripts/data/pull-market-data.mjs
  *   node scripts/data/pull-market-data.mjs --skip-parcels
  *   node scripts/data/pull-market-data.mjs --skip-hpi
+ *   node scripts/data/pull-market-data.mjs --skip-zip
  *
  * Writes (static imports — no client fs):
  *   src/data/generated/free-leads.json
  *   src/data/generated/area-comps-live.json
+ *   src/data/generated/zip-zhvi-live.json
  * Cache mirrors under data/cache/
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -55,6 +58,10 @@ const LAND_PROXY_PER_ACRE = {
 const ZHVI_URL =
   "https://files.zillowstatic.com/research/public_csvs/zhvi/County_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv";
 
+/** ZIP-level ZHVI for nationwide $/sf without paid parcel APIs. */
+const ZHVI_ZIP_URL =
+  "https://files.zillowstatic.com/research/public_csvs/zhvi/Zip_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv";
+
 /** Prefer FeatureServer; fall back to MapServer if GIS path changes. */
 const HCAD_ENDPOINTS = [
   "https://www.gis.hctx.net/arcgishcpid/rest/services/HCAD/Parcels/FeatureServer/0/query",
@@ -72,6 +79,7 @@ const FETCH_TIMEOUT_MS = 90_000;
 const args = new Set(process.argv.slice(2));
 const skipParcels = args.has("--skip-parcels");
 const skipHpi = args.has("--skip-hpi");
+const skipZip = args.has("--skip-zip");
 
 function ensureDirs() {
   mkdirSync(GENERATED, { recursive: true });
@@ -172,8 +180,26 @@ function writeJson(path, data) {
   writeFileSync(path, JSON.stringify(data, null, 2), "utf8");
 }
 
+function latestZhvi(cols, dateIdxs) {
+  for (let j = dateIdxs.length - 1; j >= 0; j--) {
+    const v = Number(cols[dateIdxs[j].i]);
+    if (Number.isFinite(v) && v > 0) return { zhvi: v, asOf: dateIdxs[j].h };
+  }
+  return null;
+}
+
+function shortCountyName(regionName) {
+  return String(regionName || "")
+    .replace(/\s+County$/i, "")
+    .replace(/\s+Parish$/i, "")
+    .replace(/\s+Borough$/i, "")
+    .replace(/\s+Census Area$/i, "")
+    .replace(/\s+Municipality$/i, "")
+    .trim();
+}
+
 async function pullZhvi() {
-  console.log("[zhvi] Downloading Zillow Research ZHVI county series…");
+  console.log("[zhvi] Downloading Zillow Research ZHVI county series (nationwide)…");
   const csv = await fetchText(ZHVI_URL, "ZHVI");
   const lines = csv.split(/\r?\n/).filter(Boolean);
   const header = parseCsvLine(lines[0]);
@@ -181,47 +207,44 @@ async function pullZhvi() {
     .map((h, i) => ({ h, i }))
     .filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x.h));
   if (!dateIdxs.length) throw new Error("ZHVI: no date columns");
-  const last = dateIdxs[dateIdxs.length - 1];
-  const want = new Map(HOUSTON_COUNTIES.map((c) => [c.name, c]));
 
+  const houstonByName = new Map(HOUSTON_COUNTIES.map((c) => [c.name, c]));
   const counties = [];
+  let latestAsOf = dateIdxs[dateIdxs.length - 1].h;
+
   for (const line of lines.slice(1)) {
     const cols = parseCsvLine(line);
     const regionName = cols[2];
-    const state = cols[5];
-    if (state !== "TX" || !want.has(regionName)) continue;
-    const meta = want.get(regionName);
-    let zhvi = Number(cols[last.i]);
-    if (!Number.isFinite(zhvi) || zhvi <= 0) {
-      for (let j = dateIdxs.length - 2; j >= 0; j--) {
-        const v = Number(cols[dateIdxs[j].i]);
-        if (Number.isFinite(v) && v > 0) {
-          zhvi = v;
-          break;
-        }
-      }
-    }
-    if (!Number.isFinite(zhvi) || zhvi <= 0) continue;
-    const medianHomePsf = moneyRound(zhvi / TYPICAL_HOME_SF);
+    const state = (cols[5] || "").trim();
+    if (!regionName || state.length !== 2) continue;
+    const hit = latestZhvi(cols, dateIdxs);
+    if (!hit) continue;
+    latestAsOf = hit.asOf;
+    const houston = houstonByName.get(regionName);
+    const short = houston?.short || shortCountyName(regionName);
+    const isHouston = Boolean(houston);
     counties.push({
-      county: meta.short,
-      state: "TX",
+      county: short,
+      state,
       regionName,
-      metro: "Houston",
-      zhvi: moneyRound(zhvi),
+      metro: isHouston ? "Houston" : undefined,
+      zhvi: moneyRound(hit.zhvi),
       typicalHomeSf: TYPICAL_HOME_SF,
-      medianHomePsf,
-      avgLandPerAcre: LAND_PROXY_PER_ACRE[meta.short] ?? 50000,
-      landSource: "placeholder_proxy",
-      landNote:
-        "Land $/acre starts as Houston-metro proxy; raised from CAD vacant-parcel medians when available. ZHVI is home value, not land.",
+      medianHomePsf: moneyRound(hit.zhvi / TYPICAL_HOME_SF),
+      avgLandPerAcre: isHouston
+        ? (LAND_PROXY_PER_ACRE[short] ?? 50000)
+        : 0,
+      landSource: isHouston ? "placeholder_proxy" : "unavailable",
+      landNote: isHouston
+        ? "Land $/acre starts as Houston-metro proxy; raised from CAD vacant-parcel medians when available. ZHVI is home value, not land."
+        : "Land $/acre free CAD sample is Houston-only; home $/sf from ZHVI.",
       homeSource: "zhvi",
       homeNote: `County mid-tier ZHVI ÷ ${TYPICAL_HOME_SF} typical sf (not assessed $/sf).`,
     });
   }
 
-  if (counties.length < 4) {
-    throw new Error(`ZHVI: expected Houston counties, got ${counties.length}`);
+  if (counties.length < 100) {
+    throw new Error(`ZHVI: expected nationwide counties, got ${counties.length}`);
   }
 
   const pulledAt = new Date().toISOString();
@@ -230,14 +253,65 @@ async function pullZhvi() {
     source: "Zillow Research ZHVI (County, SFR+Condo mid-tier, smoothed SA)",
     sourceUrl: ZHVI_URL,
     researchPage: "https://www.zillow.com/research/data/",
-    asOf: last.h,
+    asOf: latestAsOf,
     pulledAt,
-    method: `salePsf ≈ county ZHVI ÷ ${TYPICAL_HOME_SF} typical finished sf`,
+    method: `salePsf ≈ county ZHVI ÷ ${TYPICAL_HOME_SF} typical finished sf (US counties)`,
     typicalHomeSf: TYPICAL_HOME_SF,
     counties,
   };
 
   console.log(`[zhvi] asOf ${snapshot.asOf}: ${counties.length} counties`);
+  return snapshot;
+}
+
+/** Compact ZIP → ZHVI home value map for free zip-level $/sf. */
+async function pullZipZhvi() {
+  console.log("[zhvi-zip] Downloading Zillow Research ZHVI zip series…");
+  const csv = await fetchText(ZHVI_ZIP_URL, "ZHVI-ZIP");
+  const lines = csv.split(/\r?\n/).filter(Boolean);
+  const header = parseCsvLine(lines[0]);
+  const dateIdxs = header
+    .map((h, i) => ({ h, i }))
+    .filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x.h));
+  if (!dateIdxs.length) throw new Error("ZHVI-ZIP: no date columns");
+
+  /** @type {Record<string, number>} */
+  const zips = {};
+  let asOf = dateIdxs[dateIdxs.length - 1].h;
+  let count = 0;
+
+  for (const line of lines.slice(1)) {
+    const cols = parseCsvLine(line);
+    // RegionName is ZIP (5 digits)
+    const zip = String(cols[2] || "").replace(/\D/g, "").slice(0, 5);
+    if (zip.length !== 5) continue;
+    const hit = latestZhvi(cols, dateIdxs);
+    if (!hit) continue;
+    asOf = hit.asOf;
+    zips[zip] = moneyRound(hit.zhvi);
+    count++;
+  }
+
+  if (count < 1000) {
+    throw new Error(`ZHVI-ZIP: expected many zips, got ${count}`);
+  }
+
+  const snapshot = {
+    provider: "zhvi-zip",
+    source: "Zillow Research ZHVI (Zip, SFR+Condo mid-tier, smoothed SA)",
+    sourceUrl: ZHVI_ZIP_URL,
+    researchPage: "https://www.zillow.com/research/data/",
+    asOf,
+    pulledAt: new Date().toISOString(),
+    typicalHomeSf: TYPICAL_HOME_SF,
+    method: `salePsf ≈ zip ZHVI ÷ ${TYPICAL_HOME_SF} typical finished sf`,
+    disclaimer:
+      "ZIP median home value index ÷ typical sf — free public research index, not MLS comps.",
+    count,
+    zips,
+  };
+
+  console.log(`[zhvi-zip] asOf ${asOf}: ${count} zips`);
   return snapshot;
 }
 
@@ -713,9 +787,20 @@ function applyLandMedians(zhviSnapshot, listings) {
 async function main() {
   ensureDirs();
   const started = Date.now();
-  console.log("Estate free data pull — Houston metro (open CAD + ZHVI + FHFA)\n");
+  console.log("Estate free data pull — US ZHVI + Houston CAD (+ optional RentCast later)\n");
 
   const zhvi = await pullZhvi();
+
+  let zipZhvi = null;
+  if (!skipZip) {
+    try {
+      zipZhvi = await pullZipZhvi();
+    } catch (e) {
+      console.warn("[zhvi-zip] failed:", e.message || e);
+    }
+  } else {
+    console.log("[zhvi-zip] skipped (--skip-zip)");
+  }
 
   let fhfa = null;
   if (!skipHpi) {
@@ -752,7 +837,7 @@ async function main() {
       console.warn("[fbcad] failed:", e.message || e);
     }
   } else {
-    console.log("[parcels] skipped (--skip-parcels)");
+    console.log("[parcels] skipped (--skip-parcels) — keep existing free-leads if present");
   }
 
   const taxYear =
@@ -797,7 +882,25 @@ async function main() {
   let listings = [...hcadHomes, ...fbcadHomes, ...hcadLand, ...fbcadLand];
   listings = [...new Map(listings.map((l) => [l.id, l])).values()];
 
-  if (listings.length > MAX_LISTINGS) {
+  // Preserve CAD inventory when only refreshing indices
+  if (skipParcels || listings.length === 0) {
+    const existingPath = join(GENERATED, "free-leads.json");
+    if (existsSync(existingPath)) {
+      try {
+        const prev = JSON.parse(readFileSync(existingPath, "utf8"));
+        if (Array.isArray(prev.listings) && prev.listings.length) {
+          listings = prev.listings;
+          console.log(
+            `[parcels] reused ${listings.length} listings from free-leads.json`,
+          );
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  if (listings.length > MAX_LISTINGS && !skipParcels) {
     listings.sort((a, b) => a.price - b.price);
     const cells = new Map();
     const kept = [];
@@ -830,16 +933,16 @@ async function main() {
     method: zhvi.method,
     typicalHomeSf: TYPICAL_HOME_SF,
     landMethod:
-      "Prefer median assessed $/acre from vacant CAD parcels in sample; else static Houston-metro proxy. Not sales comps.",
+      "Prefer median assessed $/acre from vacant CAD parcels in Houston sample; else proxy (Houston) or unavailable elsewhere. Not sales comps.",
     homeDealThreshold: 0.5,
     disclaimer:
-      "Home $/sf from public ZHVI research (not MLS). Land $/acre from CAD sample or proxies. Assessor values ≠ list prices. Not ATTOM.",
+      "Home $/sf from public ZHVI research (not MLS). Land $/acre from CAD sample or proxies where available. Assessor values ≠ list prices. Optional RentCast when API key set.",
     counties: zhvi.counties.map((c) => ({
       county: c.county,
       state: c.state,
       medianHomePsf: c.medianHomePsf,
       avgLandPerAcre: c.avgLandPerAcre,
-      metro: "Houston",
+      metro: c.metro,
       zhvi: c.zhvi,
       landSource: c.landSource,
       landSampleSize: c.landSampleSize,
@@ -858,19 +961,30 @@ async function main() {
 
   const freeLeads = {
     provider: "free-cad",
-    /** Future: 'attom' when paid feed is plugged in */
     sourceChannel: "free-cad",
     disclaimer:
-      "Public CAD assessed / market estimates, not live MLS list prices. Screen candidates; verify with realtor. Not ATTOM data.",
+      "Public CAD assessed / market estimates, not live MLS list prices. Screen candidates; verify with realtor.",
     sources: [
       {
         id: "zhvi",
         provider: "zhvi",
-        name: "Zillow Research ZHVI (county)",
+        name: "Zillow Research ZHVI (county, nationwide)",
         asOf: zhvi.asOf,
         pulledAt: zhvi.pulledAt,
         url: zhvi.sourceUrl,
       },
+      ...(zipZhvi
+        ? [
+            {
+              id: "zhvi-zip",
+              provider: "zhvi-zip",
+              name: "Zillow Research ZHVI (zip, nationwide)",
+              asOf: zipZhvi.asOf,
+              pulledAt: zipZhvi.pulledAt,
+              url: zipZhvi.sourceUrl,
+            },
+          ]
+        : []),
       {
         id: "hcad",
         provider: "hcad",
@@ -917,36 +1031,28 @@ async function main() {
   writeJson(join(CACHE, "free-leads.json"), freeLeads);
   writeJson(join(CACHE, "area-comps-live.json"), areaCompsLive);
 
+  if (zipZhvi) {
+    writeJson(join(GENERATED, "zip-zhvi-live.json"), zipZhvi);
+    writeJson(join(CACHE, "zip-zhvi-live.json"), zipZhvi);
+  }
+
   writeFileSync(
     join(ROOT, "data", "cache", "README.md"),
-    `# Free open-data cache — Houston metro
+    `# Free open-data cache
 
 Generated by \`npm run data:pull\` (\`scripts/data/pull-market-data.mjs\`).
 
 | File | Source | Purpose |
 |------|--------|---------|
-| \`free-leads.json\` | HCAD + FBCAD ArcGIS | Deal Finder inventory (assessor values) |
-| \`area-comps-live.json\` / \`zhvi-counties.json\` | ZHVI + CAD land medians | County $/sf and $/acre benchmarks |
-| \`fhfa-hpi.json\` | FHFA HPI | Houston metro price-trend signal |
+| \`free-leads.json\` | HCAD + FBCAD ArcGIS | Deal Finder inventory |
+| \`area-comps-live.json\` | ZHVI county (US) + CAD land | County $/sf / $/acre |
+| \`zip-zhvi-live.json\` | ZHVI zip (US) | ZIP $/sf for Property → Market |
+| \`fhfa-hpi.json\` | FHFA HPI | Houston metro trend |
 
-Also mirrored to \`src/data/generated/*.json\` for **static client import** (no \`fs\` in the browser; Vercel ships the snapshot).
+Also mirrored to \`src/data/generated/*.json\`.
 
-## Important: assessor ≠ list price
-
-- CAD rows use county **assessed / market** values from open ArcGIS, **not** MLS asking prices.
-- Home unit price for Harris often uses a typical living-area proxy when CAD omits sqft.
-- ZHVI is Zillow Research open data (home value index), not scraped listings.
-- This is **not ATTOM** or any paid listing API — sources are swappable later (\`source: free-cad | user | attom\`).
-
-## Re-pull
-
-\`\`\`bash
-npm run data:pull
-\`\`\`
-
-Options: \`--skip-parcels\`, \`--skip-hpi\`.
-
-**Coverage:** Harris + Fort Bend parcels sample; ZHVI for all six Houston-metro counties in the app.
+Options: \`--skip-parcels\`, \`--skip-hpi\`, \`--skip-zip\`.
+Paid property fill-in: optional \`RENTCAST_API_KEY\` in the app (not in this pull).
 `,
   );
 
@@ -955,14 +1061,20 @@ Options: \`--skip-parcels\`, \`--skip-hpi\`.
     `# Market data
 
 Run \`npm run data:pull\` to refresh free public data. See \`cache/README.md\`.
+Optional nationwide property detail: set \`RENTCAST_API_KEY\` in the app env.
 `,
   );
 
   console.log(
-    `\nDone in ${((Date.now() - started) / 1000).toFixed(1)}s — ${listings.length} free-cad listings (${JSON.stringify(byProvider)}), ZHVI asOf ${zhvi.asOf}`,
+    `\nDone in ${((Date.now() - started) / 1000).toFixed(1)}s — ${listings.length} free-cad listings (${JSON.stringify(byProvider)}), ZHVI asOf ${zhvi.asOf} (${zhvi.counties.length} counties)`,
   );
   console.log("  → src/data/generated/free-leads.json");
   console.log("  → src/data/generated/area-comps-live.json");
+  if (zipZhvi) {
+    console.log(
+      `  → src/data/generated/zip-zhvi-live.json (${zipZhvi.count} zips)`,
+    );
+  }
   if (errors.length) console.log("Partial errors:", errors.join("; "));
   if (!listings.length && !skipParcels) {
     console.warn(

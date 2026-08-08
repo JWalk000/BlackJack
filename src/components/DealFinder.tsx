@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   type AreaComp,
-  AREA_COMPS,
+  houstonAreaComps,
   defaultCompsTable,
   formatZhviAsOf,
   getAreaCompsMeta,
@@ -133,7 +133,7 @@ export function DealFinder() {
   );
 
   const counties = useMemo(() => {
-    const set = new Set(AREA_COMPS.map((c) => c.county));
+    const set = new Set(houstonAreaComps().map((c) => c.county));
     allListings.forEach((l) => set.add(l.county));
     return Array.from(set).sort();
   }, [allListings]);
@@ -733,7 +733,7 @@ export function DealFinder() {
                 setLead((p) => ({ ...p, county: e.target.value }))
               }
             >
-              {AREA_COMPS.map((c) => (
+              {houstonAreaComps().map((c) => (
                 <option key={c.county} value={c.county}>
                   {c.county}, {c.state}
                 </option>
