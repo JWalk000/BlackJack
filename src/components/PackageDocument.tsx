@@ -250,21 +250,14 @@ export function PackageDocument({
 
       <section className="package-break-avoid mt-8">
         <h2 className="border-b border-[#111] pb-1 font-display text-xl text-[#111]">
-          Purchase &amp; financing
+          Exit value &amp; financing
         </h2>
         <table className="mt-3 w-full border-collapse text-sm">
           <tbody>
             {(
               [
-                ["Purchase price", money(deal.assumptions.purchasePrice)],
-                [
-                  "Closing costs",
-                  `${money(deal.assumptions.closingCosts)}${
-                    !deal.assumptions.closingCostsManual
-                      ? " (4% default)"
-                      : ""
-                  }`,
-                ],
+                ["After-repair / exit value (ARV)", money(deal.assumptions.arv)],
+                ["Closing costs", money(deal.assumptions.closingCosts)],
                 [
                   deal.buildMode === "new_build"
                     ? "Build period (months)"
@@ -278,7 +271,6 @@ export function PackageDocument({
                     : `${deal.financing.style.replace("_", " ")} · ${deal.financing.ltvPct}% LTV · ${deal.financing.interestRatePct}% · ${deal.financing.pointsPct} pts`,
                 ],
                 ["Estimated financing cost", money(result.financingCost)],
-                ["After-repair / exit value (ARV)", money(deal.assumptions.arv)],
                 ...(deal.exitStrategy === "flip"
                   ? [
                       [
