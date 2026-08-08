@@ -10,7 +10,6 @@ import {
   type ReactNode,
 } from "react";
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
-import { normalizePhone } from "./contact";
 import { isSupabaseConfigured } from "./supabase/config";
 import { tryCreateClient } from "./supabase/client";
 import { claimTeamInvites } from "./teams";
@@ -22,13 +21,6 @@ type AuthContextValue = {
   session: Session | null;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (email: string, password: string) => Promise<{ error?: string }>;
-  /** Send SMS OTP (requires Phone provider enabled in Supabase). */
-  sendPhoneOtp: (phone: string) => Promise<{ error?: string }>;
-  /** Verify SMS OTP and establish session. */
-  verifyPhoneOtp: (
-    phone: string,
-    token: string,
-  ) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
 };
 
@@ -59,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(next);
       setUser(next?.user ?? null);
       setLoading(false);
-      // Attach pending team invites matching this email or phone.
+      // Attach pending team invites matching this email.
       if (next?.user) {
         void claimTeamInvites(sb);
       }
@@ -117,44 +109,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {};
   }, []);
 
-  const sendPhoneOtp = useCallback(async (phone: string) => {
-    const sb = tryCreateClient();
-    if (!sb) return { error: "Cloud auth is not configured." };
-    const e164 = normalizePhone(phone);
-    if (!e164) {
-      return {
-        error:
-          "Enter a valid phone (US 10-digit or international +E.164, e.g. +15551234567).",
-      };
-    }
-    const { error } = await sb.auth.signInWithOtp({ phone: e164 });
-    if (error) return { error: error.message };
-    return {};
-  }, []);
-
-  const verifyPhoneOtp = useCallback(async (phone: string, token: string) => {
-    const sb = tryCreateClient();
-    if (!sb) return { error: "Cloud auth is not configured." };
-    const e164 = normalizePhone(phone);
-    if (!e164) {
-      return { error: "Enter a valid phone number." };
-    }
-    const code = token.trim();
-    if (!code) return { error: "Enter the code from your SMS." };
-
-    const { data, error } = await sb.auth.verifyOtp({
-      phone: e164,
-      token: code,
-      type: "sms",
-    });
-    if (error) return { error: error.message };
-    setSession(data.session);
-    setUser(data.user ?? data.session?.user ?? null);
-    setLoading(false);
-    if (data.session?.user) void claimTeamInvites(sb);
-    return {};
-  }, []);
-
   const signOut = useCallback(async () => {
     const sb = tryCreateClient();
     if (sb) await sb.auth.signOut();
@@ -171,21 +125,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       signIn,
       signUp,
-      sendPhoneOtp,
-      verifyPhoneOtp,
       signOut,
     }),
-    [
-      cloudReady,
-      loading,
-      user,
-      session,
-      signIn,
-      signUp,
-      sendPhoneOtp,
-      verifyPhoneOtp,
-      signOut,
-    ],
+    [cloudReady, loading, user, session, signIn, signUp, signOut],
   );
 
   return (

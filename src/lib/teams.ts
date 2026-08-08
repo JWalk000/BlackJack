@@ -3,9 +3,7 @@ import { TEAM_SEAT_LIMIT } from "./billing/plans";
 import {
   displayContact,
   looksLikeEmail,
-  looksLikePhone,
   normalizeEmail,
-  normalizePhone,
 } from "./contact";
 import { tryCreateClient } from "./supabase/client";
 
@@ -137,47 +135,24 @@ export async function createTeam(
 }
 
 /**
- * Invite by email and/or phone. Pass a single contact string (email or phone)
- * or both fields explicitly.
+ * Invite by email only. Teammate claims seat when they sign in with that email.
  */
 export async function inviteTeamMember(
   teamId: string,
   contactOrEmail: string,
-  phoneOnly?: string,
 ): Promise<{ memberId?: string; error?: string }> {
   const sb = tryCreateClient();
   if (!sb) return { error: "Cloud not configured" };
 
-  let email: string | null = null;
-  let phone: string | null = null;
-
-  if (phoneOnly != null && phoneOnly.trim()) {
-    email = contactOrEmail.trim() ? normalizeEmail(contactOrEmail) : null;
-    phone = normalizePhone(phoneOnly);
-  } else {
-    const raw = contactOrEmail.trim();
-    if (looksLikeEmail(raw)) {
-      email = normalizeEmail(raw);
-    } else if (looksLikePhone(raw)) {
-      phone = normalizePhone(raw);
-    } else if (raw.includes("@")) {
-      email = normalizeEmail(raw);
-    } else {
-      phone = normalizePhone(raw);
-    }
-  }
-
-  if (!email && !phone) {
-    return {
-      error:
-        "Enter a valid email or phone (US 10-digit or +E.164 like +15551234567)",
-    };
+  const email = normalizeEmail(contactOrEmail);
+  if (!email || !looksLikeEmail(contactOrEmail.trim())) {
+    return { error: "Enter a valid email address" };
   }
 
   const { data, error } = await sb.rpc("invite_team_member", {
     p_team_id: teamId,
     p_email: email,
-    p_phone: phone,
+    p_phone: null,
   });
   if (error) return { error: mapTeamRpcError(error.message) };
   return { memberId: data as string };
@@ -200,5 +175,5 @@ export function seatsRemaining(memberCount: number): number {
 }
 
 export function memberLabel(m: Pick<TeamMemberRow, "email" | "phone">): string {
-  return displayContact({ email: m.email, phone: m.phone });
+  return displayContact({ email: m.email, phone: m.phone ?? null });
 }

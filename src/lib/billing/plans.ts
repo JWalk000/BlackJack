@@ -158,7 +158,7 @@ export const PLAN_COPY = {
       "Everything in Pro",
       `${TEAM_SEAT_LIMIT} seats (owner + ${TEAM_SEAT_LIMIT - 1} invites)`,
       "Shared team deals for the whole roster",
-      "Owner invites by email or phone",
+      "Owner invites by email",
       "Create team in-app; Stripe Team Checkout available",
     ],
   },
