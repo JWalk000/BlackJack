@@ -1,2 +1,2 @@
 /** Product brand shown in UI, metadata, and bank packages. */
-export const BRAND_NAME = "Arc Estate";
+export const BRAND_NAME = "Estate Arc";

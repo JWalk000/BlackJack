@@ -1,6 +1,6 @@
-﻿# Arc Estate
+# Estate Arc
 
-Build and underwrite real estate deals — ground-up or rehab, residential or commercial — with full itemized costs.
+Build and underwrite real estate deals � ground-up or rehab, residential or commercial � with full itemized costs.
 
 ```bash
 npm install
@@ -17,7 +17,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | Storage | Local only (enforced) | Cloud sync + auto-save | Same + team seats (5) |
 | Share link `/package/[token]` | Paywalled (enforced) | Yes | Yes |
 
-**Current product mode: free** — paywalls off by default. Pro/Team prices, stickers, Checkout, webhooks, and price ID env vars stay wired; nothing is required to pay.
+**Current product mode: free** � paywalls off by default. Pro/Team prices, stickers, Checkout, webhooks, and price ID env vars stay wired; nothing is required to pay.
 
 Billing: Stripe Checkout + Customer Portal. Entitlements live in Supabase `profiles` (`plan`, `status`, `stripe_customer_id`).
 
@@ -39,29 +39,29 @@ Leave both unset (or anything other than `true`) to keep full product free. Stri
 | Deals | Browser `localStorage` | Cloud table `user_deals` + local offline cache (**Pro**) |
 | Auth | Guest only (Sign in explains setup) | Email/password accounts |
 | Plan | Free limits | `profiles` row drives Free vs Pro |
-| Bank package PDF | Print → Save as PDF | Same |
-| Share link `/package/[token]` | Pro only · local file store in dev | Pro only · Postgres `shared_packages` |
+| Bank package PDF | Print ? Save as PDF | Same |
+| Share link `/package/[token]` | Pro only � local file store in dev | Pro only � Postgres `shared_packages` |
 
 Guests work offline under Free limits. Cloud sync and share links require **Pro**.
 
 ## Cloud setup (Supabase free tier)
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. **SQL Editor** → New query → paste and run, **in order**:
-   1. Entire [`supabase/schema.sql`](supabase/schema.sql) — `profiles`, `user_deals`, `shared_packages`
-   2. Entire [`supabase/teams.sql`](supabase/teams.sql) — teams, invites, share-deal RLS, RPCs  
+2. **SQL Editor** ? New query ? paste and run, **in order**:
+   1. Entire [`supabase/schema.sql`](supabase/schema.sql) � `profiles`, `user_deals`, `shared_packages`
+   2. Entire [`supabase/teams.sql`](supabase/teams.sql) � teams, invites, share-deal RLS, RPCs  
       **Required for Create team.** Without it, the app errors with  
       `Could not find the function public.create_team(p_name) in the schema cache`.
-3. **Project Settings → API** → copy:
-   - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
-   - `anon` `public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `service_role` key → `SUPABASE_SERVICE_ROLE_KEY` (**server only** — Stripe webhooks)
+3. **Project Settings ? API** ? copy:
+   - Project URL ? `NEXT_PUBLIC_SUPABASE_URL`
+   - `anon` `public` key ? `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `service_role` key ? `SUPABASE_SERVICE_ROLE_KEY` (**server only** � Stripe webhooks)
 4. Put them in `.env.local` (local) and Vercel **Environment Variables** (production).
-5. **Authentication → Providers → Email**: leave enabled. For fastest MVP testing, turn off **Confirm email**.
+5. **Authentication ? Providers ? Email**: leave enabled. For fastest MVP testing, turn off **Confirm email**.
 6. Restart `npm run dev` / redeploy.
 
 ```bash
-# Server only — never prefix with NEXT_PUBLIC_
+# Server only � never prefix with NEXT_PUBLIC_
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
@@ -69,8 +69,8 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 If Create team fails with a schema-cache message:
 
-1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your **Arc Estate** project.
-2. **SQL → New query**.
+1. Open [Supabase Dashboard](https://supabase.com/dashboard) ? your **Estate Arc** project.
+2. **SQL ? New query**.
 3. Paste the **entire** contents of [`supabase/teams.sql`](supabase/teams.sql) (repo path).
 4. **Run**. It is idempotent (safe to re-run).
 5. Wait a few seconds for PostgREST cache, then retry **Create team** in the app.
@@ -105,12 +105,12 @@ RPCs the app expects (PostgREST arg names must match):
 
 ### Dashboard product
 
-1. Open [Stripe Dashboard](https://dashboard.stripe.com) → **Product catalog**.
-2. **Add product** named **Arc Estate Pro** (one product per tier — do not put Free and Pro prices on the same product).
+1. Open [Stripe Dashboard](https://dashboard.stripe.com) ? **Product catalog**.
+2. **Add product** named **Estate Arc Pro** (one product per tier � do not put Free and Pro prices on the same product).
 3. **Price**: recurring, **$15.00 USD / month**. Copy the Price ID (`price_...`).
-4. **Developers → API keys**: copy **Secret key** (`sk_test_...` or `sk_live_...`). Publishable key is optional for this Checkout redirect flow.
-5. **Settings → Billing → Customer portal**: enable cancel / update payment method as desired.
-6. **Developers → Webhooks → Add endpoint**
+4. **Developers ? API keys**: copy **Secret key** (`sk_test_...` or `sk_live_...`). Publishable key is optional for this Checkout redirect flow.
+5. **Settings ? Billing ? Customer portal**: enable cancel / update payment method as desired.
+6. **Developers ? Webhooks ? Add endpoint**
    - Production URL: `https://giddyup.space/api/stripe/webhook`
    - Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
    - Copy the endpoint **signing secret** (`whsec_...`).
@@ -136,7 +136,7 @@ Never commit real keys. Use placeholders until your Stripe account is ready.
 # Terminal A
 npm run dev
 
-# Terminal B — Stripe CLI
+# Terminal B � Stripe CLI
 stripe login
 stripe listen --forward-to localhost:3000/api/stripe/webhook
 # Paste the printed whsec_... into STRIPE_WEBHOOK_SECRET and restart next
@@ -157,36 +157,36 @@ Production webhook: **`https://giddyup.space/api/stripe/webhook`**.
 
 ### Flow
 
-1. User signs in → `/pricing` → **Subscribe**.
-2. Checkout completes → webhook sets `profiles.plan = pro`.
+1. User signs in ? `/pricing` ? **Subscribe**.
+2. Checkout completes ? webhook sets `profiles.plan = pro`.
 3. Header shows **Manage billing** (portal) instead of **Upgrade to Pro**.
-4. On cancel → webhook sets Free; soft limits resume.
+4. On cancel ? webhook sets Free; soft limits resume.
 
 If Stripe keys are missing, the app still builds; Checkout returns a configuration error until env is set.
 
 ### Bank package distribution
 
-1. Open a deal → **Final numbers** → **Open bank package** (or `/deals/[id]/package`).
-2. **Download PDF for bank** → browser print dialog → Save as PDF (Free + Pro).
-3. **Copy share link** → **Pro only** — read-only snapshot at `/package/[token]` (90-day default).
-4. Share page disclaimer: *Generated by Arc Estate · not MLS appraisal*.
+1. Open a deal ? **Final numbers** ? **Open bank package** (or `/deals/[id]/package`).
+2. **Download PDF for bank** ? browser print dialog ? Save as PDF (Free + Pro).
+3. **Copy share link** ? **Pro only** � read-only snapshot at `/package/[token]` (90-day default).
+4. Share page disclaimer: *Generated by Estate Arc � not MLS appraisal*.
 
-Share links need durable storage on Vercel → configure Supabase. Locally, files can land under `data/shared/`.
+Share links need durable storage on Vercel ? configure Supabase. Locally, files can land under `data/shared/`.
 
 ## Find deals (public market data)
 
 **Route:** `/deals/find`
 
-Inventory and benchmarks ship as committed JSON snapshots under `src/data/generated/` (static import — no `fs` in the client). Production does not scrape at request time.
+Inventory and benchmarks ship as committed JSON snapshots under `src/data/generated/` (static import � no `fs` in the client). Production does not scrape at request time.
 
 | Source | Use |
 |--------|-----|
-| [Zillow Research ZHVI](https://www.zillow.com/research/data/) county CSV | Area median home $/sf ≈ ZHVI ÷ 1900 finished sf |
+| [Zillow Research ZHVI](https://www.zillow.com/research/data/) county CSV | Area median home $/sf � ZHVI � 1900 finished sf |
 | Harris CAD parcels (ArcGIS) | Residential + vacant parcel sample (assessed/market value) |
 | Fort Bend CAD parcels (ArcGIS) | Homes with living area + vacant land |
 | [FHFA HPI](https://www.fhfa.gov/data/hpi) (optional) | Houston metro trend badge only |
 
-**CAD assessed/market value ≠ MLS list price.** UI labels price as assessor value and asks users to verify with a realtor.
+**CAD assessed/market value ? MLS list price.** UI labels price as assessor value and asks users to verify with a realtor.
 
 ### Refresh data
 
