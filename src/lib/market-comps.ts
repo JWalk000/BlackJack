@@ -150,3 +150,10 @@ export function resolveMarketCompsFree(
   }
   return fromAreaComp(comp, buildingSf, arv);
 }
+
+/** Async entry for API routes; free ZHVI only (paid providers optional later). */
+export async function resolveMarketCompsAsync(
+  input: MarketCompsResolveInput,
+): Promise<MarketCompsSnapshot | null> {
+  return resolveMarketCompsFree(input);
+}

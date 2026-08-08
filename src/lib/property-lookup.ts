@@ -32,7 +32,7 @@ export type PropertySuggestion = {
   lotSf?: number | null;
   yearBuilt?: number | null;
   apn?: string;
-  source: "free-cad" | "hcad-live" | "fbcad-live" | "sample" | "census";
+  source: "free-cad" | "hcad-live" | "fbcad-live" | "sample" | "census" | "rentcast";
   notes?: string;
 };
 
