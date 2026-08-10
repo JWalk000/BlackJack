@@ -586,11 +586,11 @@ export function DealWorkspace({
               </div>
             </div>
 
-            {/* Inputs left · stack (budget + exit math) right */}
-            <div className="grid gap-3 lg:grid-cols-2">
-              <section className="panel space-y-3 p-4">
-                <p className="page-label">Inputs</p>
+            {/* Single column: assumptions, then stack under them */}
+            <section className="panel space-y-4 p-4 sm:p-5">
+              <p className="page-label">Underwrite</p>
 
+              <div className="space-y-3">
                 <Field
                   label={
                     deal.exitStrategy === "flip"
@@ -643,21 +643,46 @@ export function DealWorkspace({
                   </Field>
                 </div>
 
-                <Field label="Financing">
-                  <select
-                    className={inputClass}
-                    value={deal.financing.style}
-                    onChange={(e) =>
-                      patchFinancing({
-                        style: e.target.value as Deal["financing"]["style"],
-                      })
-                    }
-                  >
-                    <option value="all_cash">All cash</option>
-                    <option value="hard_money">Hard money / private</option>
-                    <option value="conventional">Conventional / bank</option>
-                  </select>
-                </Field>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Financing">
+                    <select
+                      className={inputClass}
+                      value={deal.financing.style}
+                      onChange={(e) =>
+                        patchFinancing({
+                          style: e.target.value as Deal["financing"]["style"],
+                        })
+                      }
+                    >
+                      <option value="all_cash">All cash</option>
+                      <option value="hard_money">Hard money / private</option>
+                      <option value="conventional">
+                        Conventional / bank
+                      </option>
+                    </select>
+                  </Field>
+                  {deal.exitStrategy === "flip" ? (
+                    <Field label="Months to sell">
+                      <NumberInput
+                        value={deal.assumptions.monthsToSaleOrRent}
+                        onChange={(v) =>
+                          patchAssumptions({ monthsToSaleOrRent: v ?? 0 })
+                        }
+                        min={0}
+                      />
+                    </Field>
+                  ) : (
+                    <Field label="Gross rent / mo">
+                      <MoneyInput
+                        value={deal.assumptions.grossRentMonthly}
+                        onChange={(grossRentMonthly) =>
+                          patchAssumptions({ grossRentMonthly })
+                        }
+                      />
+                    </Field>
+                  )}
+                </div>
+
                 {deal.financing.style !== "all_cash" ? (
                   <div className="grid gap-3 sm:grid-cols-3">
                     <Field label="LTV %">
@@ -692,38 +717,19 @@ export function DealWorkspace({
                 ) : null}
 
                 {deal.exitStrategy === "flip" ? (
-                  <div className="grid gap-3 border-t border-line pt-3 sm:grid-cols-2">
-                    <Field label="Months to sell">
-                      <NumberInput
-                        value={deal.assumptions.monthsToSaleOrRent}
-                        onChange={(v) =>
-                          patchAssumptions({ monthsToSaleOrRent: v ?? 0 })
-                        }
-                        min={0}
-                      />
-                    </Field>
-                    <Field label="Cost of sale %">
-                      <NumberInput
-                        value={deal.assumptions.costOfSalePct}
-                        onChange={(v) =>
-                          patchAssumptions({ costOfSalePct: v ?? 0 })
-                        }
-                        min={0}
-                        max={20}
-                        step={0.25}
-                      />
-                    </Field>
-                  </div>
+                  <Field label="Cost of sale %">
+                    <NumberInput
+                      value={deal.assumptions.costOfSalePct}
+                      onChange={(v) =>
+                        patchAssumptions({ costOfSalePct: v ?? 0 })
+                      }
+                      min={0}
+                      max={20}
+                      step={0.25}
+                    />
+                  </Field>
                 ) : (
-                  <div className="grid gap-3 border-t border-line pt-3 sm:grid-cols-2">
-                    <Field label="Gross rent / mo">
-                      <MoneyInput
-                        value={deal.assumptions.grossRentMonthly}
-                        onChange={(grossRentMonthly) =>
-                          patchAssumptions({ grossRentMonthly })
-                        }
-                      />
-                    </Field>
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <Field label="OpEx / mo">
                       <MoneyInput
                         value={deal.assumptions.operatingExpensesMonthly}
@@ -801,17 +807,20 @@ export function DealWorkspace({
                     ) : null}
                   </div>
                 )}
-              </section>
+              </div>
 
-              <AnalysisStackPanel
-                deal={deal}
-                result={result}
-                buildingSf={buildingSf}
-                exitPsf={exitPsf}
-                formatPsf={formatPsf}
-                onGoToCosts={() => goTab("costs")}
-              />
-            </div>
+              <div className="border-t border-line pt-4">
+                <AnalysisStackPanel
+                  deal={deal}
+                  result={result}
+                  buildingSf={buildingSf}
+                  exitPsf={exitPsf}
+                  formatPsf={formatPsf}
+                  onGoToCosts={() => goTab("costs")}
+                  embedded
+                />
+              </div>
+            </section>
 
             <MarketCompsPanel deal={deal} />
 
@@ -868,7 +877,7 @@ export function DealWorkspace({
   );
 }
 
-/** Budget + exit math in one panel (no separate metric-card stack). */
+/** Budget + exit math; sits under inputs in the same flow. */
 function AnalysisStackPanel({
   deal,
   result,
@@ -876,6 +885,7 @@ function AnalysisStackPanel({
   exitPsf,
   formatPsf,
   onGoToCosts,
+  embedded = false,
 }: {
   deal: Deal;
   result: UnderwritingResult;
@@ -883,6 +893,7 @@ function AnalysisStackPanel({
   exitPsf: number | null;
   formatPsf: (n: number | null) => string;
   onGoToCosts: () => void;
+  embedded?: boolean;
 }) {
   const b = summarizeBudget(deal);
 
@@ -899,8 +910,8 @@ function AnalysisStackPanel({
           ["Cap on cost", pct(result.capRateOnCost)],
         ] as [string, string][]);
 
-  return (
-    <section className="panel space-y-4 p-4">
+  const body = (
+    <>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="page-label">Stack</p>
@@ -985,6 +996,12 @@ function AnalysisStackPanel({
           </div>
         ))}
       </dl>
-    </section>
+    </>
   );
+
+  if (embedded) {
+    return <div className="space-y-4">{body}</div>;
+  }
+
+  return <section className="panel space-y-4 p-4">{body}</section>;
 }
