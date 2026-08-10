@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import type { Deal } from "@/lib/types";
-import { summarizeBudget, verdictForDeal } from "@/lib/budget";
 import { money, pct, underwrite } from "@/lib/underwriting";
+import { verdictForDeal } from "@/lib/budget";
 
 /**
- * Decision snapshot — lives on Final numbers, mirrored in bank package.
- * Keep go/no-go + key $ in one place so the app does not feel scattered.
+ * Decision snapshot — Final numbers only, should render at page bottom
+ * (after inputs / math / market).
  */
 export function DealDecisionSnapshot({
   deal,
@@ -17,7 +17,6 @@ export function DealDecisionSnapshot({
   packageHref: string;
 }) {
   const result = underwrite(deal);
-  const budget = summarizeBudget(deal);
   const verdict = verdictForDeal(deal, {
     exitStrategy: deal.exitStrategy,
     flipProfit: result.flipProfit,
@@ -78,7 +77,7 @@ export function DealDecisionSnapshot({
         </div>
       </div>
 
-      <dl className="mt-3 grid gap-px border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+      <dl className="mt-3 grid gap-px border border-line bg-line sm:grid-cols-3">
         <Snap
           label="Exit value (ARV)"
           value={money(deal.assumptions.arv)}
@@ -97,32 +96,11 @@ export function DealDecisionSnapshot({
             tone={result.cashFlowMonthly >= 0 ? "profit" : "loss"}
           />
         )}
-        <Snap
-          label="Budget vs spent"
-          value={
-            budget.budgetSet
-              ? `${money(budget.spent)} / ${money(budget.costBudget)}`
-              : `${money(budget.spent)} · no cap`
-          }
-          tone={
-            budget.status === "over"
-              ? "loss"
-              : budget.status === "into_contingency"
-                ? "signal"
-                : undefined
-          }
-        />
       </dl>
 
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted">
         <span>Cash required {money(result.cashRequired)}</span>
         <span>% of ARV {pct(result.pctOfArv)}</span>
-        {budget.contingencyPct > 0 ? (
-          <span>
-            Contingency {budget.contingencyPct}% (
-            {money(budget.contingencyDollars)})
-          </span>
-        ) : null}
         {deal.exitStrategy === "flip" ? (
           <span>ROI on cash {pct(result.flipRoiOnCash)}</span>
         ) : (

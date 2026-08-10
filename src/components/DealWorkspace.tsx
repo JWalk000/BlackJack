@@ -491,47 +491,49 @@ export function DealWorkspace({
 
         {tab === "analysis" ? (
           <div className="space-y-3">
-            <div className="flex flex-wrap items-end justify-between gap-2 border-b border-line pb-3">
+            <div className="flex flex-wrap items-end justify-between gap-2 border-b border-line pb-2">
               <div>
-                <p className="page-label">Analysis</p>
-                <h2 className="page-title mt-1 text-2xl sm:text-3xl">
-                  Final numbers
+                <p className="page-label">Final numbers</p>
+                <h2 className="page-title mt-0.5 text-2xl sm:text-3xl">
+                  Underwrite the exit
                 </h2>
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                {(
+                  [
+                    ["flip", "Sell"],
+                    ["hold", "Hold"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    data-active={deal.exitStrategy === id}
+                    onClick={() => onChange({ ...deal, exitStrategy: id })}
+                    className="select-tile px-3 py-1.5 text-center text-xs font-semibold"
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <DealDecisionSnapshot
-                deal={deal}
-                packageHref={`/deals/${deal.id}/package`}
-              />
+            {/* Budget context first; decision closes the page */}
+            <DealBudgetStrip
+              deal={deal}
+              mode="summary"
+              onGoToCosts={() => goTab("costs")}
+            />
 
-              <DealBudgetStrip
-                deal={deal}
-                mode="summary"
-                onGoToCosts={() => goTab("costs")}
-              />
+            {/* Inputs → Math */}
+            <div className="grid gap-3 lg:grid-cols-2">
+              <section className="panel space-y-3 p-4">
+                <p className="page-label">Inputs</p>
 
-              <MarketCompsPanel deal={deal} />
-            </div>
-
-          <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-            <section className="panel space-y-6 p-5 sm:p-7">
-              <div>
-                <p className="page-label">Assumptions</p>
-                <h2 className="mt-2 font-display text-2xl tracking-tight text-ink sm:text-3xl">
-                  Exit value, timeline, financing
-                </h2>
-              </div>
-
-              <div className="space-y-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                  Exit value
-                </p>
                 <Field
                   label={
                     deal.exitStrategy === "flip"
-                      ? "After-repair / exit value (ARV)"
+                      ? "Exit value (ARV)"
                       : "Stabilized value (ARV)"
                   }
                 >
@@ -546,60 +548,57 @@ export function DealWorkspace({
                     }}
                   />
                 </Field>
-                <Field
-                  label="Closing costs"
-                  hint="Defaults to 4% of exit value — edit to override"
-                >
-                  <MoneyInput
-                    value={
-                      deal.assumptions.closingCostsManual
-                        ? deal.assumptions.closingCosts
-                        : defaultClosingCosts(deal.assumptions.arv)
-                    }
-                    onChange={(closingCosts) =>
-                      patchAssumptions({
-                        closingCosts,
-                        closingCostsManual: true,
-                      })
-                    }
-                  />
-                </Field>
-              </div>
 
-              <div className="space-y-4 border-t border-line pt-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                  Build budget roll-up
-                </p>
-                <div className="flex min-w-0 items-center justify-between gap-3 border border-signal/25 bg-signal/10 px-4 py-3.5">
-                  <span className="shrink-0 text-sm text-muted">
-                    From itemized costs
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Closing costs" hint="Default 4% of ARV">
+                    <MoneyInput
+                      value={
+                        deal.assumptions.closingCostsManual
+                          ? deal.assumptions.closingCosts
+                          : defaultClosingCosts(deal.assumptions.arv)
+                      }
+                      onChange={(closingCosts) =>
+                        patchAssumptions({
+                          closingCosts,
+                          closingCostsManual: true,
+                        })
+                      }
+                    />
+                  </Field>
+                  <Field
+                    label={
+                      deal.buildMode === "new_build"
+                        ? "Build months"
+                        : "Rehab months"
+                    }
+                  >
+                    <NumberInput
+                      value={deal.assumptions.projectMonths}
+                      onChange={(v) =>
+                        patchAssumptions({ projectMonths: v ?? 0 })
+                      }
+                      min={1}
+                    />
+                  </Field>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 border border-line bg-stone/30 px-3 py-2 text-sm">
+                  <span className="text-muted">
+                    Itemized build
+                    <button
+                      type="button"
+                      onClick={() => goTab("costs")}
+                      className="ml-1.5 font-semibold text-signal"
+                    >
+                      Edit
+                    </button>
                   </span>
-                  <span className="min-w-0 break-all text-right font-display text-xl tracking-tight text-ink sm:text-2xl">
+                  <span className="font-display text-lg text-ink">
                     {money(result.buildBudget)}
                   </span>
                 </div>
-                <Field
-                  label={
-                    deal.buildMode === "new_build"
-                      ? "Build period (months)"
-                      : "Rehab period (months)"
-                  }
-                >
-                  <NumberInput
-                    value={deal.assumptions.projectMonths}
-                    onChange={(v) =>
-                      patchAssumptions({ projectMonths: v ?? 0 })
-                    }
-                    min={1}
-                  />
-                </Field>
-              </div>
 
-              <div className="space-y-4 border-t border-line pt-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                  Financing
-                </p>
-                <Field label="Financing style">
+                <Field label="Financing">
                   <select
                     className={inputClass}
                     value={deal.financing.style}
@@ -615,13 +614,11 @@ export function DealWorkspace({
                   </select>
                 </Field>
                 {deal.financing.style !== "all_cash" ? (
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-3 sm:grid-cols-3">
                     <Field label="LTV %">
                       <NumberInput
                         value={deal.financing.ltvPct}
-                        onChange={(v) =>
-                          patchFinancing({ ltvPct: v ?? 0 })
-                        }
+                        onChange={(v) => patchFinancing({ ltvPct: v ?? 0 })}
                         min={0}
                         max={100}
                       />
@@ -648,58 +645,14 @@ export function DealWorkspace({
                     </Field>
                   </div>
                 ) : null}
-              </div>
-            </section>
 
-            <section className="space-y-6">
-              <div className="grid grid-cols-2 gap-2">
-                {(
-                  [
-                    ["flip", "Sell"],
-                    ["hold", "Hold / rent"],
-                  ] as const
-                ).map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    data-active={deal.exitStrategy === id}
-                    onClick={() => onChange({ ...deal, exitStrategy: id })}
-                    className="select-tile px-3 py-3 text-center text-sm font-semibold"
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Metric label="All-in cost" value={money(result.totalAllIn)} />
-                <Metric
-                  label="Cash required"
-                  value={money(result.cashRequired)}
-                  tone="accent"
-                />
-                <Metric
-                  label="% of ARV"
-                  value={pct(result.pctOfArv)}
-                />
-              </div>
-
-              {deal.exitStrategy === "flip" ? (
-                <div className="panel space-y-5 p-5 sm:p-7">
-                  <div>
-                    <p className="page-label">Exit path</p>
-                    <h2 className="mt-2 font-display text-2xl tracking-tight text-ink sm:text-3xl">
-                      Sell analysis
-                    </h2>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Months to sell (after work)">
+                {deal.exitStrategy === "flip" ? (
+                  <div className="grid gap-3 border-t border-line pt-3 sm:grid-cols-2">
+                    <Field label="Months to sell">
                       <NumberInput
                         value={deal.assumptions.monthsToSaleOrRent}
                         onChange={(v) =>
-                          patchAssumptions({
-                            monthsToSaleOrRent: v ?? 0,
-                          })
+                          patchAssumptions({ monthsToSaleOrRent: v ?? 0 })
                         }
                         min={0}
                       />
@@ -716,67 +669,8 @@ export function DealWorkspace({
                       />
                     </Field>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <Metric
-                      label="Exit $/sf"
-                      value={formatPsf(exitPsf)}
-                      tone="accent"
-                    />
-                    <Metric
-                      label="Cost of sale"
-                      value={money(result.costOfSale)}
-                    />
-                    <Metric
-                      label="Net sale proceeds"
-                      value={money(result.netSaleProceeds)}
-                    />
-                  </div>
-                  {!buildingSf ? (
-                    <p className="text-xs text-muted">
-                      Set building square feet on the Property tab to calculate
-                      exit $/sf.
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted">
-                      Exit $/sf = exit value ÷{" "}
-                      {buildingSf.toLocaleString("en-US")} building sf
-                      (Property).
-                    </p>
-                  )}
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <Metric
-                      label="Projected profit"
-                      value={money(result.flipProfit)}
-                      tone={result.flipProfit >= 0 ? "profit" : "loss"}
-                    />
-                    <Metric
-                      label="ROI on cash"
-                      value={pct(result.flipRoiOnCash)}
-                      tone={result.flipRoiOnCash >= 0 ? "profit" : "loss"}
-                    />
-                    <Metric
-                      label="ROI annualized"
-                      value={pct(result.flipRoiAnnualized)}
-                      tone={
-                        result.flipRoiAnnualized >= 0 ? "profit" : "loss"
-                      }
-                    />
-                  </div>
-                  <p className="text-xs leading-relaxed text-muted">
-                    Profit = exit value − cost of sale − all-in (closing +
-                    itemized build + short-term finance cost). ROI uses cash
-                    required.
-                  </p>
-                </div>
-              ) : (
-                <div className="panel space-y-5 p-5 sm:p-7">
-                  <div>
-                    <p className="page-label">Exit path</p>
-                    <h2 className="mt-2 font-display text-2xl tracking-tight text-ink sm:text-3xl">
-                      Hold / rent analysis
-                    </h2>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                ) : (
+                  <div className="grid gap-3 border-t border-line pt-3 sm:grid-cols-2">
                     <Field label="Gross rent / mo">
                       <MoneyInput
                         value={deal.assumptions.grossRentMonthly}
@@ -785,11 +679,11 @@ export function DealWorkspace({
                         }
                       />
                     </Field>
-                    <Field label="Other income / mo">
+                    <Field label="OpEx / mo">
                       <MoneyInput
-                        value={deal.assumptions.otherIncomeMonthly}
-                        onChange={(otherIncomeMonthly) =>
-                          patchAssumptions({ otherIncomeMonthly })
+                        value={deal.assumptions.operatingExpensesMonthly}
+                        onChange={(operatingExpensesMonthly) =>
+                          patchAssumptions({ operatingExpensesMonthly })
                         }
                       />
                     </Field>
@@ -803,125 +697,150 @@ export function DealWorkspace({
                         max={100}
                       />
                     </Field>
-                    <Field label="OpEx / mo">
+                    <Field label="Other income / mo">
                       <MoneyInput
-                        value={deal.assumptions.operatingExpensesMonthly}
-                        onChange={(operatingExpensesMonthly) =>
-                          patchAssumptions({ operatingExpensesMonthly })
+                        value={deal.assumptions.otherIncomeMonthly}
+                        onChange={(otherIncomeMonthly) =>
+                          patchAssumptions({ otherIncomeMonthly })
                         }
                       />
                     </Field>
+                    <Field label="Refinance after rehab?">
+                      <select
+                        className={inputClass}
+                        value={deal.assumptions.refinance ? "yes" : "no"}
+                        onChange={(e) =>
+                          patchAssumptions({
+                            refinance: e.target.value === "yes",
+                          })
+                        }
+                      >
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                      </select>
+                    </Field>
+                    {deal.assumptions.refinance ? (
+                      <>
+                        <Field label="Perm LTV %">
+                          <NumberInput
+                            value={deal.assumptions.permanentLtvPct}
+                            onChange={(v) =>
+                              patchAssumptions({ permanentLtvPct: v ?? 0 })
+                            }
+                            min={0}
+                            max={100}
+                          />
+                        </Field>
+                        <Field label="Rate %">
+                          <NumberInput
+                            value={deal.assumptions.permanentRatePct}
+                            onChange={(v) =>
+                              patchAssumptions({ permanentRatePct: v ?? 0 })
+                            }
+                            min={0}
+                            step={0.125}
+                          />
+                        </Field>
+                        <Field label="Term yrs">
+                          <NumberInput
+                            value={deal.assumptions.permanentTermYears}
+                            onChange={(v) =>
+                              patchAssumptions({
+                                permanentTermYears: v ?? 0,
+                              })
+                            }
+                            min={1}
+                          />
+                        </Field>
+                      </>
+                    ) : null}
                   </div>
+                )}
+              </section>
 
-                  <Field label="Refinance into permanent debt?">
-                    <select
-                      className={inputClass}
-                      value={deal.assumptions.refinance ? "yes" : "no"}
-                      onChange={(e) =>
-                        patchAssumptions({
-                          refinance: e.target.value === "yes",
-                        })
-                      }
-                    >
-                      <option value="no">No</option>
-                      <option value="yes">Yes</option>
-                    </select>
-                  </Field>
-                  {deal.assumptions.refinance ? (
-                    <div className="grid gap-4 sm:grid-cols-3">
-                      <Field label="Permanent LTV %">
-                        <NumberInput
-                          value={deal.assumptions.permanentLtvPct}
-                          onChange={(v) =>
-                            patchAssumptions({ permanentLtvPct: v ?? 0 })
-                          }
-                          min={0}
-                          max={100}
-                        />
-                      </Field>
-                      <Field label="Rate %">
-                        <NumberInput
-                          value={deal.assumptions.permanentRatePct}
-                          onChange={(v) =>
-                            patchAssumptions({ permanentRatePct: v ?? 0 })
-                          }
-                          min={0}
-                          step={0.125}
-                        />
-                      </Field>
-                      <Field label="Term (years)">
-                        <NumberInput
-                          value={deal.assumptions.permanentTermYears}
-                          onChange={(v) =>
-                            patchAssumptions({
-                              permanentTermYears: v ?? 0,
-                            })
-                          }
-                          min={1}
-                        />
-                      </Field>
-                    </div>
-                  ) : null}
+              <section className="panel space-y-3 p-4">
+                <p className="page-label">Math</p>
+                <h3 className="font-display text-xl tracking-tight text-ink">
+                  {deal.exitStrategy === "flip" ? "How the sale stacks" : "How the hold stacks"}
+                </h3>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
+                {deal.exitStrategy === "flip" ? (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Metric
+                      label="All-in cost"
+                      value={money(result.totalAllIn)}
+                    />
+                    <Metric
+                      label="Cost of sale"
+                      value={money(result.costOfSale)}
+                    />
+                    <Metric
+                      label="Net proceeds"
+                      value={money(result.netSaleProceeds)}
+                    />
+                    <Metric
+                      label="Cash required"
+                      value={money(result.cashRequired)}
+                      tone="accent"
+                    />
+                    {buildingSf ? (
+                      <Metric
+                        label="Exit $/sf"
+                        value={formatPsf(exitPsf)}
+                      />
+                    ) : null}
+                    <Metric
+                      label="% of ARV (all-in)"
+                      value={pct(result.pctOfArv)}
+                    />
+                  </div>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Metric
+                      label="All-in cost"
+                      value={money(result.totalAllIn)}
+                    />
+                    <Metric
+                      label="Cash required"
+                      value={money(result.cashRequired)}
+                      tone="accent"
+                    />
                     <Metric
                       label="NOI / mo"
                       value={money(result.noiMonthly)}
                       tone={result.noiMonthly >= 0 ? "profit" : "loss"}
                     />
                     <Metric
-                      label="Cash flow / mo"
-                      value={money(result.cashFlowMonthly)}
-                      tone={result.cashFlowMonthly >= 0 ? "profit" : "loss"}
-                    />
-                    <Metric
-                      label="Sweat equity"
-                      value={money(result.sweatEquity)}
-                      tone={result.sweatEquity >= 0 ? "profit" : "loss"}
-                    />
-                    <Metric
-                      label="Cash-on-cash"
-                      value={pct(result.cashOnCashAnnual)}
-                      tone={
-                        result.cashOnCashAnnual >= 0 ? "profit" : "loss"
-                      }
-                    />
-                    <Metric
                       label="Cap rate on cost"
                       value={pct(result.capRateOnCost)}
                     />
-                    <Metric
-                      label="Cap rate on ARV"
-                      value={pct(result.capRateOnArv)}
-                    />
                   </div>
-                </div>
-              )}
-            </section>
-          </div>
-            <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-line pt-6 sm:flex-row sm:flex-wrap sm:items-center">
+                )}
+              </section>
+            </div>
+
+            <MarketCompsPanel deal={deal} />
+
+            <DealDecisionSnapshot
+              deal={deal}
+              packageHref={`/deals/${deal.id}/package`}
+            />
+
+            <div className="flex flex-col-reverse items-stretch justify-between gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <button
                 type="button"
-                className="btn-forest w-full sm:w-auto"
+                className="btn-forest w-full !min-h-10 sm:w-auto"
                 onClick={() => goTab("costs")}
               >
                 Previous: Itemized costs
               </button>
-              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-                <a
-                  href={`/deals/${deal.id}/package`}
-                  className="btn-ghost w-full sm:w-auto"
-                >
-                  Open bank package
-                </a>
-                <button
-                  type="button"
-                  className="btn-signal w-full sm:w-auto"
-                  onClick={() => goTab("project")}
-                >
-                  Next: Project
-                </button>
-              </div>
+              <button
+                type="button"
+                className="btn-signal w-full !min-h-10 sm:w-auto"
+                onClick={() => goTab("project")}
+              >
+                Next: Project
+              </button>
             </div>
           </div>
         ) : null}
