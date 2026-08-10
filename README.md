@@ -52,7 +52,7 @@ Guests work offline under Free limits. Cloud sync and share links require **Pro*
    2. Entire [`supabase/teams.sql`](supabase/teams.sql) — teams, invites, share-deal RLS, RPCs  
       **Required for Create team.** Without it, the app errors with  
       `Could not find the function public.create_team(p_name) in the schema cache`.
-   3. Optional: entire [`supabase/deal-files-storage.sql`](supabase/deal-files-storage.sql) — Storage bucket for Project tab files (signed-in). Without it, files stay in the browser only.
+   3. Optional: entire [`supabase/deal-files-storage.sql`](supabase/deal-files-storage.sql) — Storage bucket for Project files (team-aware). Run **after** teams.sql. Without it, files stay in the browser only.
 3. **Project Settings ? API** ? copy:
    - Project URL ? `NEXT_PUBLIC_SUPABASE_URL`
    - `anon` `public` key ? `NEXT_PUBLIC_SUPABASE_ANON_KEY`

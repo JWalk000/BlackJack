@@ -1,10 +1,12 @@
 "use client";
 
 import { Fragment, type KeyboardEvent } from "react";
-import type { CostItem } from "@/lib/types";
+import type { CostItem, Deal } from "@/lib/types";
 import { COST_CATEGORY_ORDER } from "@/lib/types";
+import { summarizeBudget } from "@/lib/budget";
 import { money, uid } from "@/lib/underwriting";
-import { Field, MoneyInput } from "./ui";
+import { DealBudgetStrip } from "./DealBudgetStrip";
+import { MoneyInput } from "./ui";
 
 function sortCategories(cats: string[]): string[] {
   const order = COST_CATEGORY_ORDER as readonly string[];
@@ -37,43 +39,33 @@ function focusCostField(itemId: string, field: CostNavField) {
 }
 
 export function CostItemizer({
-  items,
+  deal,
   onChange,
   onResetTemplate,
-  propertyClass,
-  buildMode,
-  costBudget = 0,
-  onCostBudgetChange,
 }: {
-  items: CostItem[];
-  onChange: (items: CostItem[]) => void;
+  deal: Deal;
+  onChange: (deal: Deal) => void;
   onResetTemplate?: () => void;
-  propertyClass?: string;
-  buildMode?: string;
-  /** Deal target for itemized construction costs. 0 = not set. */
-  costBudget?: number;
-  onCostBudgetChange?: (budget: number) => void;
 }) {
+  const items = deal.costItems;
   const total = items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
-  const budget = Math.max(0, Number(costBudget) || 0);
-  const budgetSet = budget > 0;
-  const remaining = budgetSet ? budget - total : null;
-  const overBudget = budgetSet && total > budget;
-  const usedPct = budgetSet
-    ? Math.min(999, Math.round((total / budget) * 100))
-    : 0;
-  const barPct = budgetSet ? Math.min(100, (total / budget) * 100) : 0;
+  const budget = summarizeBudget(deal);
+  const overBudget = budget.status === "over";
+
+  function setItems(next: CostItem[]) {
+    onChange({ ...deal, costItems: next });
+  }
 
   function update(id: string, patch: Partial<CostItem>) {
-    onChange(items.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+    setItems(items.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   }
 
   function remove(id: string) {
-    onChange(items.filter((i) => i.id !== id));
+    setItems(items.filter((i) => i.id !== id));
   }
 
   function add() {
-    onChange([
+    setItems([
       ...items,
       {
         id: uid("cost"),
@@ -92,7 +84,6 @@ export function CostItemizer({
   }, {});
 
   const categories = sortCategories(Object.keys(byCategory));
-  // Visual row order (categories top-to-bottom, rows within each block).
   const orderedIds = categories.flatMap((cat) =>
     byCategory[cat].map((i) => i.id),
   );
@@ -105,7 +96,6 @@ export function CostItemizer({
     const idx = orderedIds.indexOf(itemId);
     const fieldIdx = FIELDS.indexOf(field);
 
-    // Enter / ↓ amount column: next row same field
     if (e.key === "Enter" || (e.key === "ArrowDown" && !e.altKey)) {
       e.preventDefault();
       if (idx < 0 || idx >= orderedIds.length - 1) return;
@@ -120,7 +110,6 @@ export function CostItemizer({
       return;
     }
 
-    // Tab moves across columns within row (default works; Left/Right with Ctrl)
     if (e.key === "ArrowRight" && e.ctrlKey) {
       e.preventDefault();
       if (fieldIdx < 0 || fieldIdx >= FIELDS.length - 1) return;
@@ -146,11 +135,11 @@ export function CostItemizer({
     .reduce((s, i) => s + (Number(i.amount) || 0), 0);
 
   const scopeLabel =
-    propertyClass === "commercial"
-      ? buildMode === "rehab"
+    deal.propertyClass === "commercial"
+      ? deal.buildMode === "rehab"
         ? "Commercial rehab · CSI soft + division hard costs"
         : "Commercial ground-up · CSI soft + division hard costs"
-      : buildMode === "new_build"
+      : deal.buildMode === "new_build"
         ? "Residential ground-up · NAHB-style soft + hard"
         : "Residential rehab · soft + hard work packages";
 
@@ -158,121 +147,14 @@ export function CostItemizer({
 
   return (
     <div className="space-y-6">
-      {/* Sticky budget tracker */}
-      <div
-        className={`sticky top-0 z-20 border px-4 py-4 sm:px-5 ${
-          overBudget
-            ? "border-loss/40 bg-[color-mix(in_srgb,var(--loss)_8%,var(--paper))]"
-            : "border-line bg-paper/95 backdrop-blur-sm"
-        }`}
-        role="region"
-        aria-label="Deal cost budget tracker"
-      >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Field
-              label="Deal budget"
-              hint="Your max for this itemized scope"
-            >
-              <MoneyInput
-                value={budget}
-                onChange={(v) => onCostBudgetChange?.(Math.max(0, v))}
-              />
-            </Field>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                Spent
-              </p>
-              <p
-                className={`mt-1.5 font-display text-2xl tracking-tight sm:text-3xl ${
-                  overBudget ? "text-loss" : "text-ink"
-                }`}
-              >
-                {money(total)}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                {budgetSet
-                  ? overBudget
-                    ? "Over by"
-                    : "Remaining"
-                  : "Set a budget"}
-              </p>
-              <p
-                className={`mt-1.5 font-display text-2xl tracking-tight sm:text-3xl ${
-                  !budgetSet
-                    ? "text-muted"
-                    : overBudget
-                      ? "text-loss"
-                      : remaining != null && remaining <= budget * 0.1
-                        ? "text-signal"
-                        : "text-profit"
-                }`}
-              >
-                {budgetSet && remaining != null
-                  ? money(Math.abs(remaining))
-                  : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                Used
-              </p>
-              <p
-                className={`mt-1.5 font-display text-2xl tracking-tight sm:text-3xl ${
-                  overBudget ? "text-loss" : "text-ink"
-                }`}
-              >
-                {budgetSet ? `${usedPct}%` : "—"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {budgetSet ? (
-          <div className="mt-4">
-            <div className="h-2 overflow-hidden bg-stone">
-              <div
-                className={`h-full transition-[width,background-color] ${
-                  overBudget ? "bg-loss" : "bg-signal"
-                }`}
-                style={{ width: `${barPct}%` }}
-              />
-            </div>
-          </div>
-        ) : null}
-
-        {overBudget ? (
-          <p
-            className="mt-3 text-sm font-medium text-loss"
-            role="alert"
-            aria-live="polite"
-          >
-            Over budget by {money(total - budget)}. Trim line items or raise
-            the deal budget so the number still works.
-          </p>
-        ) : budgetSet &&
-          total > 0 &&
-          remaining != null &&
-          remaining <= budget * 0.1 ? (
-          <p className="mt-3 text-sm text-muted" role="status">
-            Within 10% of budget — {money(remaining)} left before you max out.
-          </p>
-        ) : !budgetSet ? (
-          <p className="mt-3 text-sm text-muted">
-            Enter a deal budget above. As you fill the sheet, spend and
-            remaining update so you know if the itemization stays on plan.
-          </p>
-        ) : null}
-      </div>
+      <DealBudgetStrip deal={deal} onChange={onChange} mode="edit" />
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="page-label">Itemized budget</p>
           <p className="mt-1 max-w-xl text-sm text-muted">
             {scopeLabel}. Sheet-style entry — Tab / arrows, Enter moves down.
-            Totals feed final numbers.
+            Totals feed Final numbers and the Project snapshot.
           </p>
           {(softTotal > 0 || hardTotal > 0) && (
             <p className="mt-2 text-xs text-muted">
@@ -488,16 +370,32 @@ export function CostItemizer({
               })}
             </tbody>
             <tfoot>
+              {budget.contingencyPct > 0 ? (
+                <tr className="bg-stone/50">
+                  <td
+                    colSpan={4}
+                    className="border-t border-line px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-[0.12em] text-muted"
+                  >
+                    Contingency reserve ({budget.contingencyPct}%)
+                  </td>
+                  <td className="border-t border-line px-2 py-2 text-right font-mono text-sm tabular-nums text-signal">
+                    {money(budget.contingencyDollars)}
+                  </td>
+                  <td className="border-t border-line" />
+                </tr>
+              ) : null}
               <tr className="bg-ink text-paper">
                 <td
                   colSpan={4}
                   className="border-t border-ink px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.14em]"
                 >
-                  Grand total
+                  Grand total (spent)
                 </td>
                 <td
                   className={`border-t border-ink px-2 py-2.5 text-right font-mono text-base font-semibold tabular-nums ${
-                    overBudget ? "text-[color-mix(in_srgb,#fff_20%,#f5b5ad)]" : ""
+                    overBudget
+                      ? "text-[color-mix(in_srgb,#fff_20%,#f5b5ad)]"
+                      : ""
                   }`}
                 >
                   {money(total)}
@@ -511,7 +409,7 @@ export function CostItemizer({
 
       <p className="text-xs text-muted">
         Tips: Enter or ↓ moves down a column · Ctrl+← / Ctrl+→ jumps cells ·
-        Add row appends at the bottom
+        Contingency lives in the budget bar — not a duplicate line item
       </p>
     </div>
   );

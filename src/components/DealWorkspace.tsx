@@ -10,6 +10,8 @@ import { CostItemizer } from "./CostItemizer";
 import { AddressLookup } from "./AddressLookup";
 import { MarketCompsPanel } from "./MarketCompsPanel";
 import { DealProjectPanel } from "./DealProjectPanel";
+import { DealBudgetStrip } from "./DealBudgetStrip";
+import { DealDecisionSnapshot } from "./DealDecisionSnapshot";
 // import { DealExcelButtons } from "./DealExcelButtons"; // EXCEL_DEAL_IO — re-enable when ready
 import {
   Field,
@@ -441,15 +443,9 @@ export function DealWorkspace({
         {tab === "costs" ? (
           <div className="space-y-8">
             <CostItemizer
-              items={deal.costItems}
-              onChange={(costItems) => onChange({ ...deal, costItems })}
-              costBudget={deal.costBudget}
-              onCostBudgetChange={(costBudget) =>
-                onChange({ ...deal, costBudget })
-              }
+              deal={deal}
+              onChange={onChange}
               onResetTemplate={resetCostTemplate}
-              propertyClass={deal.propertyClass}
-              buildMode={deal.buildMode}
             />
             <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-line pt-6 sm:flex-row sm:flex-wrap sm:items-center">
               <button
@@ -479,27 +475,22 @@ export function DealWorkspace({
                   Final numbers
                 </h2>
                 <p className="mt-2 max-w-xl text-sm text-muted">
-                  Purchase and financing assumptions on the left; sell or hold
-                  results on the right. Export a print-ready package for your
-                  lender.
+                  Decision first, then assumptions and full results. Same budget
+                  strip as Costs — bank package opens from here.
                 </p>
               </div>
-              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-                <a
-                  href={`/deals/${deal.id}/package`}
-                  className="btn-signal w-full sm:w-auto"
-                >
-                  Open bank package
-                </a>
-                <a
-                  href={`/deals/${deal.id}/package`}
-                  className="btn-ghost w-full sm:w-auto"
-                  title="Print or share from the package page"
-                >
-                  Print / share
-                </a>
-              </div>
             </div>
+
+            <DealDecisionSnapshot
+              deal={deal}
+              packageHref={`/deals/${deal.id}/package`}
+            />
+
+            <DealBudgetStrip
+              deal={deal}
+              mode="summary"
+              onGoToCosts={() => goTab("costs")}
+            />
 
             <MarketCompsPanel deal={deal} />
 
@@ -916,7 +907,11 @@ export function DealWorkspace({
 
         {tab === "project" ? (
           <div className="space-y-8">
-            <DealProjectPanel deal={deal} onChange={onChange} />
+            <DealProjectPanel
+              deal={deal}
+              onChange={onChange}
+              onGoToCosts={() => goTab("costs")}
+            />
             <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-line pt-6 sm:flex-row sm:flex-wrap sm:items-center">
               <button
                 type="button"

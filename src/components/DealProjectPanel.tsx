@@ -15,7 +15,6 @@ import {
   putLocalFileBlob,
 } from "@/lib/deal-file-store";
 import {
-  constructionBudget,
   defaultPhases,
   fileKindFromMime,
   formatFileSize,
@@ -23,7 +22,8 @@ import {
   PROJECT_MAX_FILE_BYTES,
   PROJECT_MAX_FILES,
 } from "@/lib/project";
-import { money, uid } from "@/lib/underwriting";
+import { uid } from "@/lib/underwriting";
+import { DealBudgetStrip } from "./DealBudgetStrip";
 import { Field, inputClass } from "./ui";
 
 function patchProject(
@@ -39,9 +39,11 @@ function patchProject(
 export function DealProjectPanel({
   deal,
   onChange,
+  onGoToCosts,
 }: {
   deal: Deal;
   onChange: (deal: Deal) => void;
+  onGoToCosts?: () => void;
 }) {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -50,7 +52,6 @@ export function DealProjectPanel({
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
 
   const project = deal.project;
-  const budget = useMemo(() => constructionBudget(deal), [deal]);
   const progress = useMemo(
     () => overallProjectProgress(project.phases),
     [project.phases],
@@ -156,11 +157,14 @@ export function DealProjectPanel({
       let cloudPath: string | null = null;
 
       if (user) {
-        const path = cloudFilePath(user.id, deal.id, id, file.name);
+        const path = cloudFilePath(deal.id, id, file.name);
         const up = await uploadDealFileCloud(path, file, file.type || "application/octet-stream");
         if (!up.error) {
           storage = "both";
           cloudPath = path;
+        } else {
+          // Keep local if cloud rejected (e.g. storage policy not applied yet)
+          errors.push(`${file.name}: cloud ${up.error}`);
         }
       }
 
@@ -235,21 +239,18 @@ export function DealProjectPanel({
         <p className="page-label">After the numbers</p>
         <h2 className="page-title mt-2 text-3xl sm:text-4xl">Project</h2>
         <p className="mt-2 max-w-xl text-sm text-muted">
-          Numbers said the deal works — keep the job simple here: budget
-          snapshot, a light schedule, and files in one place.
+          Numbers said the deal works — keep the job simple here with the same
+          budget as Costs, a light schedule, and files the team can share.
         </p>
       </div>
 
-      <section className="panel grid gap-6 p-5 sm:grid-cols-3 sm:p-7">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-            Construction budget
-          </p>
-          <p className="mt-2 font-display text-3xl tracking-tight text-ink">
-            {money(budget)}
-          </p>
-          <p className="mt-1 text-xs text-muted">From itemized costs</p>
-        </div>
+      <DealBudgetStrip
+        deal={deal}
+        mode="summary"
+        onGoToCosts={onGoToCosts}
+      />
+
+      <section className="panel grid gap-6 p-5 sm:grid-cols-2 sm:p-7">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
             Overall progress
@@ -372,7 +373,9 @@ export function DealProjectPanel({
               files, 12&nbsp;MB each.
               {!user
                 ? " Stored in this browser until you sign in."
-                : " Saved on this device and the cloud when available."}
+                : deal.teamId
+                  ? " Shared with your team when this deal is team-shared."
+                  : " Saved on this device and the cloud when available."}
             </p>
           </div>
           <div>

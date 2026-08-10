@@ -2,14 +2,19 @@ import { tryCreateClient } from "./supabase/client";
 
 export const DEAL_FILES_BUCKET = "deal-files";
 
+/**
+ * Path layout: deals/{dealId}/{fileId}-name
+ * RLS grants any authenticated user who can open the deal
+ * (owner or team member) — see supabase/deal-files-storage.sql.
+ */
 export function cloudFilePath(
-  userId: string,
   dealId: string,
   fileId: string,
   fileName: string,
 ): string {
   const safe = fileName.replace(/[^\w.\-()+ ]+/g, "_").slice(0, 80);
-  return `${userId}/${dealId}/${fileId}-${safe}`;
+  const safeDeal = dealId.replace(/[^\w.\-]+/g, "_").slice(0, 80);
+  return `deals/${safeDeal}/${fileId}-${safe}`;
 }
 
 export async function uploadDealFileCloud(

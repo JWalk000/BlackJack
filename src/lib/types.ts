@@ -115,6 +115,11 @@ export type Deal = {
    * 0 = not set (tracking only shows spend, no over-budget alert).
    */
   costBudget: number;
+  /**
+   * Contingency % of deal budget (0–30). Held as soft reserve under the cap.
+   * Spend into contingency = caution; spend past full budget = over.
+   */
+  contingencyPct: number;
   /** Build execution: schedule, files, job notes. */
   project: DealProject;
   /**

@@ -561,17 +561,26 @@
 
 /* Bank package print */
 @media print {
+  @page {
+    size: letter;
+    margin: 0.5in;
+  }
+
+  html,
   body {
     background: #fff !important;
+    color: #111 !important;
   }
 
   .bank-package {
     background: #fff !important;
+    min-height: 0 !important;
   }
 
   .package-sheet {
     max-width: none !important;
-    padding: 0.45in 0.55in !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   .package-break-avoid {
@@ -579,8 +588,20 @@
     page-break-inside: avoid;
   }
 
+  .package-decision {
+    break-after: avoid;
+  }
+
   a[href]::after {
     content: none !important;
+  }
+
+  /* Hide app chrome if any bleeds through */
+  header,
+  nav,
+  .site-header,
+  .print\:hidden {
+    display: none !important;
   }
 }
 

@@ -80,7 +80,10 @@ export async function POST(request: Request) {
     }
 
     const origin = new URL(request.url).origin;
-    const url = `${origin}/package/${token}`;
+    const appBase = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+    const url = appBase
+      ? `${appBase}/package/${token}`
+      : `${origin}/package/${token}`;
 
     return NextResponse.json({
       token,

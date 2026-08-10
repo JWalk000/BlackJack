@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { getDeal } from "@/lib/deals";
 import type { Deal } from "@/lib/types";
 import { useBilling } from "@/lib/billing/context";
@@ -10,6 +11,7 @@ import { PackageDocument } from "./PackageDocument";
 import { BillingToast, type BillingToastState } from "./BillingToast";
 
 export function BankPackage({ id }: { id: string }) {
+  const searchParams = useSearchParams();
   const { isPro, freeMode } = useBilling();
   const [deal, setDeal] = useState<Deal | null>(null);
   const [missing, setMissing] = useState(false);
@@ -30,6 +32,16 @@ export function BankPackage({ id }: { id: string }) {
     setDeal(found);
   }, [id]);
 
+  // Print decision package from Final numbers → "Print decision package"
+  useEffect(() => {
+    if (!deal) return;
+    if (searchParams.get("print") !== "1") return;
+    const t = window.setTimeout(() => {
+      window.print();
+    }, 450);
+    return () => window.clearTimeout(t);
+  }, [deal, searchParams]);
+
   async function createShareLink() {
     if (!deal) return;
     const gate = checkCanSharePackage(isPro);
@@ -45,6 +57,7 @@ export function BankPackage({ id }: { id: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ deal }),
+        credentials: "same-origin",
       });
       const data = (await res.json()) as {
         url?: string;
@@ -61,16 +74,25 @@ export function BankPackage({ id }: { id: string }) {
         );
         return;
       }
-      setShareUrl(data.url);
+      // Prefer absolute URL for copy/paste to phones and email
+      let absolute = data.url;
       try {
-        await navigator.clipboard.writeText(data.url);
+        absolute = new URL(data.url, window.location.origin).href;
+      } catch {
+        /* keep */
+      }
+      setShareUrl(absolute);
+      try {
+        await navigator.clipboard.writeText(absolute);
         setShareStatus(
           data.storage === "file"
-            ? "Link copied (stored locally — configure Supabase for production)."
-            : "Share link copied to clipboard.",
+            ? "Link copied (local store — add Supabase for production share)."
+            : "Share link copied — send it as-is; no login required for the reader.",
         );
       } catch {
-        setShareStatus("Share link ready — copy from the field below.");
+        setShareStatus(
+          "Share link ready — select the field below and copy (Ctrl/Cmd+C).",
+        );
       }
     } catch {
       setShareStatus("Network error creating share link.");
@@ -113,7 +135,7 @@ export function BankPackage({ id }: { id: string }) {
                 onClick={() => window.print()}
                 className="min-h-11 bg-[#12352c] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1f5c48]"
               >
-                Download PDF for bank
+                Print / Save PDF
               </button>
               <button
                 type="button"
@@ -135,9 +157,10 @@ export function BankPackage({ id }: { id: string }) {
             </div>
           </div>
           <p className="text-[11px] text-[#666]">
-            Print → Save as PDF in your browser.
+            Use Print → “Save as PDF” for lenders. The package opens with the
+            same decision and budget as Final numbers.
             {isPro || freeMode
-              ? " Share link is a read-only snapshot for lenders (no login required)."
+              ? " Share link is a frozen snapshot (no login for the reader)."
               : " Online share links require Pro — PDF print works on Free."}
           </p>
           {shareStatus ? (
@@ -151,12 +174,22 @@ export function BankPackage({ id }: { id: string }) {
             </p>
           ) : null}
           {shareUrl ? (
-            <input
-              readOnly
-              value={shareUrl}
-              className="w-full border border-[#ccc] bg-white px-3 py-2 text-xs text-[#333]"
-              onFocus={(e) => e.target.select()}
-            />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                readOnly
+                value={shareUrl}
+                className="min-w-0 flex-1 border border-[#ccc] bg-white px-3 py-2 text-xs text-[#333]"
+                onFocus={(e) => e.target.select()}
+              />
+              <a
+                href={shareUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-10 items-center justify-center border border-[#12352c] px-3 text-xs font-semibold text-[#12352c]"
+              >
+                Open link
+              </a>
+            </div>
           ) : null}
         </div>
       </div>

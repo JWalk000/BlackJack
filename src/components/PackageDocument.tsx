@@ -3,6 +3,7 @@
 import type { CostItem, Deal } from "@/lib/types";
 import { COST_CATEGORY_ORDER } from "@/lib/types";
 import { dealTitle } from "@/lib/deals";
+import { summarizeBudget, verdictForDeal } from "@/lib/budget";
 import { money, pct, underwrite } from "@/lib/underwriting";
 import { BRAND_NAME } from "@/lib/brand";
 
@@ -54,6 +55,14 @@ export function PackageDocument({
   generatedAt?: string;
 }) {
   const result = underwrite(deal);
+  const budget = summarizeBudget(deal);
+  const verdict = verdictForDeal(deal, {
+    exitStrategy: deal.exitStrategy,
+    flipProfit: result.flipProfit,
+    cashFlowMonthly: result.cashFlowMonthly,
+    arv: deal.assumptions.arv,
+    totalAllIn: result.totalAllIn,
+  });
   const groups = groupCosts(deal.costItems);
   const title = dealTitle(deal);
   const p = deal.property;
@@ -134,6 +143,69 @@ export function PackageDocument({
           />
         </dl>
       </header>
+
+      {/* Decision + budget — same language as Final numbers */}
+      <section
+        id="decision"
+        className="package-break-avoid package-decision mt-6 border-2 border-[#111] p-4"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#555]">
+              Deal decision
+            </p>
+            <p className="mt-1 font-display text-3xl tracking-tight text-[#111]">
+              {verdict.label}
+            </p>
+            <p className="mt-2 max-w-xl text-sm text-[#444]">{verdict.detail}</p>
+          </div>
+          <p className="text-xs text-[#666]">
+            {deal.exitStrategy === "flip" ? "Sell path" : "Hold path"}
+          </p>
+        </div>
+        <dl className="mt-4 grid border border-[#ccc] bg-white sm:grid-cols-4">
+          <SnapshotCell
+            label="Exit value (ARV)"
+            value={money(deal.assumptions.arv)}
+          />
+          <SnapshotCell label="All-in cost" value={money(result.totalAllIn)} />
+          <SnapshotCell
+            label={
+              deal.exitStrategy === "flip"
+                ? "Projected profit"
+                : "Cash flow / mo"
+            }
+            value={
+              deal.exitStrategy === "flip"
+                ? money(result.flipProfit)
+                : money(result.cashFlowMonthly)
+            }
+          />
+          <SnapshotCell
+            label="Budget vs spent"
+            value={
+              budget.budgetSet
+                ? `${money(budget.spent)} / ${money(budget.costBudget)}`
+                : `${money(budget.spent)} · no cap set`
+            }
+          />
+        </dl>
+        {budget.contingencyPct > 0 || budget.budgetSet ? (
+          <p className="mt-3 text-xs text-[#555]">
+            {budget.budgetSet
+              ? `Construction budget ${money(budget.costBudget)}`
+              : "No construction budget cap"}
+            {budget.contingencyPct > 0
+              ? ` · Contingency ${budget.contingencyPct}% (${money(budget.contingencyDollars)}) · Working target ${money(budget.workingBudget)}`
+              : null}
+            {budget.status === "over"
+              ? ` · OVER by ${money(budget.overBy)}`
+              : budget.status === "into_contingency"
+                ? " · spend into contingency"
+                : null}
+          </p>
+        ) : null}
+      </section>
 
       {/* Property snapshot for lenders */}
       <section className="package-break-avoid mt-6">
