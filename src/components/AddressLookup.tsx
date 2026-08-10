@@ -102,16 +102,13 @@ export function AddressLookup({
     setOpen(false);
     setHint(
       s.notes ||
-        `Filled from ${sourceLabel(s.source)}. Beds/baths usually need manual entry.`,
+        (s.source ? `From ${sourceLabel(s.source)}` : null),
     );
   }
 
   return (
     <div ref={wrapRef} className="relative space-y-2">
-      <Field
-        label="Street address"
-        hint="Search real CAD / public address records"
-      >
+      <Field label="Street">
         <input
           className={inputClass}
           value={query}
@@ -120,7 +117,7 @@ export function AddressLookup({
           aria-expanded={open}
           aria-controls={listId}
           aria-autocomplete="list"
-          placeholder="e.g. 4122 Red Bluff Rd"
+          placeholder="Search address…"
           onChange={(e) => {
             const v = e.target.value;
             setQuery(v);
@@ -133,7 +130,7 @@ export function AddressLookup({
         />
       </Field>
       {loading ? (
-        <p className="text-xs text-muted">Searching public records…</p>
+        <p className="text-xs text-muted">Searching…</p>
       ) : null}
       {open && suggestions.length > 0 ? (
         <ul
@@ -166,13 +163,8 @@ export function AddressLookup({
         </ul>
       ) : null}
       {hint ? (
-        <p className="text-xs leading-relaxed text-muted">{hint}</p>
-      ) : (
-        <p className="text-xs text-muted">
-          Free first: Houston CAD + US Census. Optional RentCast nationwide when
-          an API key is configured. Not MLS. Beds/baths often need manual entry.
-        </p>
-      )}
+        <p className="text-xs text-muted">{hint}</p>
+      ) : null}
     </div>
   );
 }
