@@ -854,6 +854,8 @@ export function DealWorkspace({
               packageHref={`/deals/${deal.id}/package`}
             />
 
+            <MarketCompsPanel deal={deal} />
+
             <div className="flex flex-col-reverse items-stretch justify-between gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <button
                 type="button"
@@ -870,8 +872,6 @@ export function DealWorkspace({
                 Next: Project
               </button>
             </div>
-
-            <MarketCompsPanel deal={deal} />
           </div>
         ) : null}
 
