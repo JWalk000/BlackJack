@@ -106,6 +106,7 @@ export function createDeal(partial?: Partial<Deal>): Deal {
     financing: { ...emptyFinancing(), ...partial?.financing },
     costItems:
       partial?.costItems ?? templateCostItems(buildMode, propertyClass),
+    costBudget: Math.max(0, Number(partial?.costBudget) || 0),
     project:
       partial?.project ??
       emptyProject(buildMode, assumptions.projectMonths),
@@ -158,6 +159,7 @@ export function normalizeDeal(raw: Deal): Deal {
     assumptions,
     financing: { ...emptyFinancing(), ...raw.financing },
     costItems: Array.isArray(raw.costItems) ? raw.costItems : [],
+    costBudget: Math.max(0, Number(raw.costBudget) || 0),
     project: normalizeProject(
       raw.project,
       buildMode,

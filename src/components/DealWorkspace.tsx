@@ -443,6 +443,10 @@ export function DealWorkspace({
             <CostItemizer
               items={deal.costItems}
               onChange={(costItems) => onChange({ ...deal, costItems })}
+              costBudget={deal.costBudget}
+              onCostBudgetChange={(costBudget) =>
+                onChange({ ...deal, costBudget })
+              }
               onResetTemplate={resetCostTemplate}
               propertyClass={deal.propertyClass}
               buildMode={deal.buildMode}

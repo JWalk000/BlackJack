@@ -110,6 +110,11 @@ export type Deal = {
   assumptions: DealAssumptions;
   financing: Financing;
   costItems: CostItem[];
+  /**
+   * Target itemized construction budget for this deal.
+   * 0 = not set (tracking only shows spend, no over-budget alert).
+   */
+  costBudget: number;
   /** Build execution: schedule, files, job notes. */
   project: DealProject;
   /**

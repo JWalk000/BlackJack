@@ -33,14 +33,27 @@ export function CostItemizer({
   onResetTemplate,
   propertyClass,
   buildMode,
+  costBudget = 0,
+  onCostBudgetChange,
 }: {
   items: CostItem[];
   onChange: (items: CostItem[]) => void;
   onResetTemplate?: () => void;
   propertyClass?: string;
   buildMode?: string;
+  /** Deal target for itemized construction costs. 0 = not set. */
+  costBudget?: number;
+  onCostBudgetChange?: (budget: number) => void;
 }) {
   const total = items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const budget = Math.max(0, Number(costBudget) || 0);
+  const budgetSet = budget > 0;
+  const remaining = budgetSet ? budget - total : null;
+  const overBudget = budgetSet && total > budget;
+  const usedPct = budgetSet
+    ? Math.min(999, Math.round((total / budget) * 100))
+    : 0;
+  const barPct = budgetSet ? Math.min(100, (total / budget) * 100) : 0;
 
   function update(id: string, patch: Partial<CostItem>) {
     onChange(items.map((i) => (i.id === id ? { ...i, ...patch } : i)));
@@ -123,6 +136,112 @@ export function CostItemizer({
 
   return (
     <div className="space-y-8">
+      {/* Sticky budget tracker */}
+      <div
+        className={`sticky top-0 z-20 border px-4 py-4 sm:px-5 ${
+          overBudget
+            ? "border-loss/40 bg-[color-mix(in_srgb,var(--loss)_8%,var(--paper))]"
+            : "border-line bg-paper/95 backdrop-blur-sm"
+        }`}
+        role="region"
+        aria-label="Deal cost budget tracker"
+      >
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field
+              label="Deal budget"
+              hint="Your max for this itemized scope"
+            >
+              <MoneyInput
+                value={budget}
+                onChange={(v) => onCostBudgetChange?.(Math.max(0, v))}
+              />
+            </Field>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                Spent
+              </p>
+              <p
+                className={`mt-1.5 font-display text-2xl tracking-tight sm:text-3xl ${
+                  overBudget ? "text-loss" : "text-ink"
+                }`}
+              >
+                {money(total)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                {budgetSet
+                  ? overBudget
+                    ? "Over by"
+                    : "Remaining"
+                  : "Set a budget"}
+              </p>
+              <p
+                className={`mt-1.5 font-display text-2xl tracking-tight sm:text-3xl ${
+                  !budgetSet
+                    ? "text-muted"
+                    : overBudget
+                      ? "text-loss"
+                      : remaining != null && remaining <= budget * 0.1
+                        ? "text-signal"
+                        : "text-profit"
+                }`}
+              >
+                {budgetSet && remaining != null
+                  ? money(Math.abs(remaining))
+                  : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                Used
+              </p>
+              <p
+                className={`mt-1.5 font-display text-2xl tracking-tight sm:text-3xl ${
+                  overBudget ? "text-loss" : "text-ink"
+                }`}
+              >
+                {budgetSet ? `${usedPct}%` : "—"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {budgetSet ? (
+          <div className="mt-4">
+            <div className="h-2 overflow-hidden bg-stone">
+              <div
+                className={`h-full transition-[width,background-color] ${
+                  overBudget ? "bg-loss" : "bg-signal"
+                }`}
+                style={{ width: `${barPct}%` }}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {overBudget ? (
+          <p
+            className="mt-3 text-sm font-medium text-loss"
+            role="alert"
+            aria-live="polite"
+          >
+            Over budget by {money(total - budget)}. Trim line items or raise
+            the deal budget so the number still works.
+          </p>
+        ) : budgetSet && total > 0 && remaining != null && remaining <= budget * 0.1 ? (
+          <p className="mt-3 text-sm text-muted" role="status">
+            Within 10% of budget — {money(remaining)} left before you max out.
+          </p>
+        ) : !budgetSet ? (
+          <p className="mt-3 text-sm text-muted">
+            Enter a deal budget above. As you fill sections, spend and remaining
+            update so you know if the itemization stays on plan.
+          </p>
+        ) : null}
+      </div>
+
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
         <div>
           <p className="page-label">Itemized budget</p>
