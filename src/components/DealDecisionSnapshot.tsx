@@ -17,6 +17,19 @@ export function DealDecisionSnapshot({
   packageHref: string;
 }) {
   const result = underwrite(deal);
+  const buildingSf =
+    deal.property.buildingSf != null && deal.property.buildingSf > 0
+      ? deal.property.buildingSf
+      : null;
+  const exitPsf =
+    buildingSf && deal.assumptions.arv > 0
+      ? deal.assumptions.arv / buildingSf
+      : null;
+  const exitPsfLabel =
+    exitPsf != null && Number.isFinite(exitPsf)
+      ? `$${Math.round(exitPsf).toLocaleString("en-US")}/sf`
+      : "—";
+
   const verdict = verdictForDeal(deal, {
     exitStrategy: deal.exitStrategy,
     flipProfit: result.flipProfit,
@@ -77,7 +90,7 @@ export function DealDecisionSnapshot({
         </div>
       </div>
 
-      <dl className="mt-3 grid gap-px border border-line bg-line sm:grid-cols-3">
+      <dl className="mt-3 grid gap-px border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
         <Snap
           label="Exit value (ARV)"
           value={money(deal.assumptions.arv)}
@@ -96,6 +109,7 @@ export function DealDecisionSnapshot({
             tone={result.cashFlowMonthly >= 0 ? "profit" : "loss"}
           />
         )}
+        <Snap label="Exit $/sf" value={exitPsfLabel} />
       </dl>
 
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted">

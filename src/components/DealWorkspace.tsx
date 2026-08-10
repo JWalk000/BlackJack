@@ -1,12 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
 import Link from "next/link";
 import type { BuildMode, Deal, PropertyClass } from "@/lib/types";
 import { DEFAULT_PROPERTY_TYPES } from "@/lib/types";
 import { costsAreBlank, defaultClosingCosts, templateCostItems } from "@/lib/deals";
-import { money, pct, underwrite, type UnderwritingResult } from "@/lib/underwriting";
-import { summarizeBudget } from "@/lib/budget";
 import { CostItemizer } from "./CostItemizer";
 import { AddressLookup } from "./AddressLookup";
 import { MarketCompsPanel } from "./MarketCompsPanel";
@@ -48,20 +45,7 @@ export function DealWorkspace({
     isOwner: boolean;
   } | null;
 }) {
-  const result = useMemo(() => underwrite(deal), [deal]);
   const types = DEFAULT_PROPERTY_TYPES[deal.propertyClass];
-  const buildingSf =
-    deal.property.buildingSf != null && deal.property.buildingSf > 0
-      ? deal.property.buildingSf
-      : null;
-  const exitPsf =
-    buildingSf && deal.assumptions.arv > 0
-      ? deal.assumptions.arv / buildingSf
-      : null;
-  const formatPsf = (n: number | null) =>
-    n != null && Number.isFinite(n)
-      ? `$${Math.round(n).toLocaleString("en-US")}/sf`
-      : "—";
 
   function patchProperty(p: Partial<Deal["property"]>) {
     onChange({ ...deal, property: { ...deal.property, ...p } });
@@ -863,17 +847,6 @@ export function DealWorkspace({
                 ) : null}
               </div>
 
-              <div className="border-t border-line pt-2">
-                <AnalysisStackPanel
-                  deal={deal}
-                  result={result}
-                  buildingSf={buildingSf}
-                  exitPsf={exitPsf}
-                  formatPsf={formatPsf}
-                  onGoToCosts={() => goTab("costs")}
-                  embedded
-                />
-              </div>
             </section>
 
             <MarketCompsPanel deal={deal} />
@@ -931,120 +904,3 @@ export function DealWorkspace({
   );
 }
 
-/** Budget + exit math; sits under inputs in the same flow. */
-function AnalysisStackPanel({
-  deal,
-  result,
-  buildingSf,
-  exitPsf,
-  formatPsf,
-  onGoToCosts,
-  embedded = false,
-}: {
-  deal: Deal;
-  result: UnderwritingResult;
-  buildingSf: number | null;
-  exitPsf: number | null;
-  formatPsf: (n: number | null) => string;
-  onGoToCosts: () => void;
-  embedded?: boolean;
-}) {
-  const b = summarizeBudget(deal);
-
-  const stackRows =
-    deal.exitStrategy === "flip"
-      ? ([
-          ["All-in", money(result.totalAllIn)],
-          ["Net proceeds", money(result.netSaleProceeds)],
-          buildingSf ? ["Exit $/sf", formatPsf(exitPsf)] : null,
-        ].filter(Boolean) as [string, string][])
-      : ([
-          ["All-in", money(result.totalAllIn)],
-          ["NOI / mo", money(result.noiMonthly)],
-          ["Cap on cost", pct(result.capRateOnCost)],
-        ] as [string, string][]);
-
-  const body = (
-    <>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <p className="page-label">Stack</p>
-          <h3 className="font-display text-base tracking-tight text-ink sm:text-lg">
-            {deal.exitStrategy === "flip" ? "Build → exit" : "Build → hold"}
-          </h3>
-          <p className="text-sm text-ink">
-            <span className="text-muted">Build </span>
-            <span className="font-display tracking-tight">{money(b.spent)}</span>
-            {b.budgetSet ? (
-              <>
-                <span className="text-muted"> / </span>
-                <span className="font-display tracking-tight">
-                  {money(b.costBudget)}
-                </span>
-                {b.usedPct != null ? (
-                  <span className="text-muted"> · {b.usedPct}%</span>
-                ) : null}
-              </>
-            ) : (
-              <span className="text-muted"> spent</span>
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {b.budgetSet && b.remaining != null ? (
-            <p
-              className={`text-xs ${
-                b.status === "over" ? "font-medium text-loss" : "text-muted"
-              }`}
-            >
-              {b.status === "over"
-                ? `Over ${money(b.overBy)}`
-                : `${money(b.remaining)} left`}
-            </p>
-          ) : null}
-          <button
-            type="button"
-            onClick={onGoToCosts}
-            className="text-xs font-semibold text-signal transition hover:text-ink"
-          >
-            Edit costs →
-          </button>
-        </div>
-      </div>
-
-      {b.budgetSet ? (
-        <div className="h-1 overflow-hidden bg-stone">
-          <div
-            className={`h-full ${
-              b.status === "over"
-                ? "bg-loss"
-                : b.status === "into_contingency"
-                  ? "bg-signal"
-                  : "bg-profit"
-            }`}
-            style={{ width: `${b.barPct}%` }}
-          />
-        </div>
-      ) : null}
-
-      <dl className="grid gap-px border border-line bg-line sm:grid-cols-3">
-        {stackRows.map(([label, value]) => (
-          <div key={label} className="bg-paper px-2.5 py-1.5">
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
-              {label}
-            </dt>
-            <dd className="font-display text-base tracking-tight text-ink sm:text-lg">
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </>
-  );
-
-  if (embedded) {
-    return <div className="space-y-2">{body}</div>;
-  }
-
-  return <section className="panel space-y-2 p-2.5 sm:p-3">{body}</section>;
-}
