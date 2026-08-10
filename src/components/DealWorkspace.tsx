@@ -5,19 +5,18 @@ import Link from "next/link";
 import type { BuildMode, Deal, PropertyClass } from "@/lib/types";
 import { DEFAULT_PROPERTY_TYPES } from "@/lib/types";
 import { costsAreBlank, defaultClosingCosts, templateCostItems } from "@/lib/deals";
-import { money, pct, underwrite } from "@/lib/underwriting";
+import { money, pct, underwrite, type UnderwritingResult } from "@/lib/underwriting";
+import { summarizeBudget } from "@/lib/budget";
 import { CostItemizer } from "./CostItemizer";
 import { AddressLookup } from "./AddressLookup";
 import { MarketCompsPanel } from "./MarketCompsPanel";
 import { DealProjectPanel } from "./DealProjectPanel";
-import { DealBudgetStrip } from "./DealBudgetStrip";
 import { DealDecisionSnapshot } from "./DealDecisionSnapshot";
 // import { DealExcelButtons } from "./DealExcelButtons"; // EXCEL_DEAL_IO — re-enable when ready
 import {
   Field,
   MoneyInput,
   NumberInput,
-  Metric,
   inputClass,
 } from "./ui";
 
@@ -587,14 +586,7 @@ export function DealWorkspace({
               </div>
             </div>
 
-            {/* Budget context first; decision closes the page */}
-            <DealBudgetStrip
-              deal={deal}
-              mode="summary"
-              onGoToCosts={() => goTab("costs")}
-            />
-
-            {/* Inputs → Math */}
+            {/* Inputs left · stack (budget + exit math) right */}
             <div className="grid gap-3 lg:grid-cols-2">
               <section className="panel space-y-3 p-4">
                 <p className="page-label">Inputs</p>
@@ -811,47 +803,14 @@ export function DealWorkspace({
                 )}
               </section>
 
-              <section className="panel space-y-3 p-4">
-                <p className="page-label">Math</p>
-                <h3 className="font-display text-xl tracking-tight text-ink">
-                  {deal.exitStrategy === "flip" ? "How the sale stacks" : "How the hold stacks"}
-                </h3>
-
-                {deal.exitStrategy === "flip" ? (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <Metric
-                      label="All-in cost"
-                      value={money(result.totalAllIn)}
-                    />
-                    <Metric
-                      label="Net proceeds"
-                      value={money(result.netSaleProceeds)}
-                    />
-                    {buildingSf ? (
-                      <Metric
-                        label="Exit $/sf"
-                        value={formatPsf(exitPsf)}
-                      />
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <Metric
-                      label="All-in cost"
-                      value={money(result.totalAllIn)}
-                    />
-                    <Metric
-                      label="NOI / mo"
-                      value={money(result.noiMonthly)}
-                      tone={result.noiMonthly >= 0 ? "profit" : "loss"}
-                    />
-                    <Metric
-                      label="Cap rate on cost"
-                      value={pct(result.capRateOnCost)}
-                    />
-                  </div>
-                )}
-              </section>
+              <AnalysisStackPanel
+                deal={deal}
+                result={result}
+                buildingSf={buildingSf}
+                exitPsf={exitPsf}
+                formatPsf={formatPsf}
+                onGoToCosts={() => goTab("costs")}
+              />
             </div>
 
             <MarketCompsPanel deal={deal} />
@@ -906,5 +865,126 @@ export function DealWorkspace({
         ) : null}
       </div>
     </div>
+  );
+}
+
+/** Budget + exit math in one panel (no separate metric-card stack). */
+function AnalysisStackPanel({
+  deal,
+  result,
+  buildingSf,
+  exitPsf,
+  formatPsf,
+  onGoToCosts,
+}: {
+  deal: Deal;
+  result: UnderwritingResult;
+  buildingSf: number | null;
+  exitPsf: number | null;
+  formatPsf: (n: number | null) => string;
+  onGoToCosts: () => void;
+}) {
+  const b = summarizeBudget(deal);
+
+  const stackRows =
+    deal.exitStrategy === "flip"
+      ? ([
+          ["All-in", money(result.totalAllIn)],
+          ["Net proceeds", money(result.netSaleProceeds)],
+          buildingSf ? ["Exit $/sf", formatPsf(exitPsf)] : null,
+        ].filter(Boolean) as [string, string][])
+      : ([
+          ["All-in", money(result.totalAllIn)],
+          ["NOI / mo", money(result.noiMonthly)],
+          ["Cap on cost", pct(result.capRateOnCost)],
+        ] as [string, string][]);
+
+  return (
+    <section className="panel space-y-4 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="page-label">Stack</p>
+          <h3 className="mt-0.5 font-display text-xl tracking-tight text-ink">
+            {deal.exitStrategy === "flip" ? "Build → exit" : "Build → hold"}
+          </h3>
+        </div>
+        <button
+          type="button"
+          onClick={onGoToCosts}
+          className="text-xs font-semibold text-signal transition hover:text-ink"
+        >
+          Edit costs →
+        </button>
+      </div>
+
+      <div>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+          <p className="text-sm text-ink">
+            <span className="text-muted">Build </span>
+            <span className="font-display text-lg tracking-tight">
+              {money(b.spent)}
+            </span>
+            {b.budgetSet ? (
+              <>
+                <span className="text-muted"> of </span>
+                <span className="font-display text-lg tracking-tight">
+                  {money(b.costBudget)}
+                </span>
+              </>
+            ) : (
+              <span className="text-muted"> spent · no cap set</span>
+            )}
+          </p>
+          {b.budgetSet && b.remaining != null ? (
+            <p
+              className={`text-sm ${
+                b.status === "over" ? "font-medium text-loss" : "text-muted"
+              }`}
+            >
+              {b.status === "over"
+                ? `Over ${money(b.overBy)}`
+                : `${money(b.remaining)} left`}
+              {b.contingencyPct > 0
+                ? ` · ${b.contingencyPct}% contingency`
+                : ""}
+            </p>
+          ) : null}
+        </div>
+        {b.budgetSet ? (
+          <div className="mt-2">
+            <div className="h-1.5 overflow-hidden bg-stone">
+              <div
+                className={`h-full ${
+                  b.status === "over"
+                    ? "bg-loss"
+                    : b.status === "into_contingency"
+                      ? "bg-signal"
+                      : "bg-profit"
+                }`}
+                style={{ width: `${b.barPct}%` }}
+              />
+            </div>
+            {b.usedPct != null ? (
+              <p className="mt-1 text-xs text-muted">
+                {b.usedPct}% of deal budget used
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      <dl className="grid gap-px border border-line bg-line sm:grid-cols-3">
+        {stackRows.map(([label, value]) => (
+          <div key={label} className="bg-paper px-3 py-2.5">
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+              {label}
+            </dt>
+            <dd className="mt-0.5 font-display text-lg tracking-tight text-ink sm:text-xl">
+              {value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
