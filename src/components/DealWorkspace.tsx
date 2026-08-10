@@ -137,7 +137,11 @@ export function DealWorkspace({
         onFlushSave?.();
       }}
     >
-      <div className="flex flex-col gap-5 border-b border-line pb-8 sm:flex-row sm:items-end sm:justify-between">
+      <div
+        className={`flex flex-col gap-3 border-b border-line sm:flex-row sm:items-end sm:justify-between ${
+          tab === "project" || tab === "analysis" ? "pb-4" : "gap-5 pb-8"
+        }`}
+      >
         <div className="min-w-0">
           <p className="page-label">
             {deal.buildMode === "new_build" ? "Ground-up" : "Rehab"}
@@ -145,7 +149,13 @@ export function DealWorkspace({
             {deal.propertyClass}
             {deal.teamId ? " · Team deal" : ""}
           </p>
-          <h1 className="page-title mt-2 break-words text-3xl sm:text-5xl">
+          <h1
+            className={`page-title mt-1 break-words ${
+              tab === "project" || tab === "analysis"
+                ? "text-2xl sm:text-3xl"
+                : "mt-2 text-3xl sm:text-5xl"
+            }`}
+          >
             {deal.property.name.trim() ||
               deal.property.address.trim() ||
               "Untitled deal"}
@@ -204,7 +214,11 @@ export function DealWorkspace({
         </div>
       </div>
 
-      <div className="studio-tabs mt-6 flex gap-0 overflow-x-auto overscroll-x-contain border-b border-line [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div
+        className={`studio-tabs flex gap-0 overflow-x-auto overscroll-x-contain border-b border-line [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+          tab === "project" || tab === "analysis" ? "mt-4" : "mt-6"
+        }`}
+      >
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -226,7 +240,11 @@ export function DealWorkspace({
         ))}
       </div>
 
-      <div className="mt-10">
+      <div
+        className={
+          tab === "project" || tab === "analysis" ? "mt-5" : "mt-10"
+        }
+      >
         {tab === "property" ? (
           <div className="space-y-5">
             {/* Option A structure, condensed — one column, thin rules, tight grid */}
@@ -909,23 +927,23 @@ export function DealWorkspace({
         ) : null}
 
         {tab === "project" ? (
-          <div className="space-y-8">
+          <div className="space-y-3">
             <DealProjectPanel
               deal={deal}
               onChange={onChange}
               onGoToCosts={() => goTab("costs")}
             />
-            <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-line pt-6 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex flex-col-reverse items-stretch justify-between gap-2 border-t border-line pt-3 sm:flex-row sm:flex-wrap sm:items-center">
               <button
                 type="button"
-                className="btn-forest w-full sm:w-auto"
+                className="btn-forest w-full !min-h-10 sm:w-auto"
                 onClick={() => goTab("analysis")}
               >
                 Previous: Final numbers
               </button>
               <a
                 href={`/deals/${deal.id}/package`}
-                className="btn-signal w-full sm:w-auto"
+                className="btn-signal w-full !min-h-10 sm:w-auto"
               >
                 Open bank package
               </a>

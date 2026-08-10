@@ -234,13 +234,16 @@ export function DealProjectPanel({
   }
 
   return (
-    <div className="space-y-8">
-      <div className="border-b border-line pb-6">
-        <p className="page-label">After the numbers</p>
-        <h2 className="page-title mt-2 text-3xl sm:text-4xl">Project</h2>
-        <p className="mt-2 max-w-xl text-sm text-muted">
-          Numbers said the deal works — keep the job simple here with the same
-          budget as Costs, a light schedule, and files the team can share.
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-2">
+        <div>
+          <p className="page-label">Project</p>
+          <h2 className="page-title mt-0.5 text-2xl sm:text-3xl">
+            Build execution
+          </h2>
+        </div>
+        <p className="max-w-md text-xs text-muted sm:text-right">
+          Budget, schedule, and files once the numbers work.
         </p>
       </div>
 
@@ -250,15 +253,15 @@ export function DealProjectPanel({
         onGoToCosts={onGoToCosts}
       />
 
-      <section className="panel grid gap-6 p-5 sm:grid-cols-2 sm:p-7">
+      <section className="panel grid gap-4 px-3 py-3 sm:grid-cols-2 sm:px-4 sm:py-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
             Overall progress
           </p>
-          <p className="mt-2 font-display text-3xl tracking-tight text-ink">
+          <p className="mt-0.5 font-display text-2xl tracking-tight text-ink">
             {progress}%
           </p>
-          <div className="mt-3 h-2 overflow-hidden bg-stone">
+          <div className="mt-1.5 h-1.5 overflow-hidden bg-stone">
             <div
               className="h-full bg-signal transition-[width]"
               style={{ width: `${progress}%` }}
@@ -266,34 +269,30 @@ export function DealProjectPanel({
           </div>
         </div>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
             Timeline
           </p>
-          <p className="mt-2 font-display text-3xl tracking-tight text-ink">
+          <p className="mt-0.5 font-display text-2xl tracking-tight text-ink">
             {deal.assumptions.projectMonths || "—"}
-            <span className="ml-1 text-lg font-sans text-muted">mo</span>
+            <span className="ml-1 text-base font-sans text-muted">mo</span>
           </p>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-0.5 text-xs text-muted">
             From Final numbers · edit phases below
           </p>
         </div>
       </section>
 
-      <section className="panel space-y-5 p-5 sm:p-7">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+      <section className="panel space-y-3 p-3 sm:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="page-label">Schedule</p>
-            <h3 className="mt-2 font-display text-2xl tracking-tight text-ink">
+            <h3 className="mt-0.5 font-display text-xl tracking-tight text-ink">
               Build phases
             </h3>
-            <p className="mt-1 max-w-lg text-sm text-muted">
-              Six phases by default — set dates and drag progress. No
-              Gantt required.
-            </p>
           </div>
           <button
             type="button"
-            className="btn-ghost text-sm"
+            className="btn-ghost !min-h-9 px-3 text-sm"
             onClick={resetPhaseTemplate}
           >
             Reset template
@@ -302,13 +301,13 @@ export function DealProjectPanel({
 
         <ul className="divide-y divide-line border border-line">
           {project.phases.map((phase, index) => (
-            <li key={phase.id} className="space-y-3 bg-paper p-4 sm:p-5">
+            <li key={phase.id} className="space-y-2 bg-paper p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold tabular-nums text-muted">
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <input
-                  className={`${inputClass} min-w-0 flex-1 font-medium`}
+                  className={`${inputClass} min-h-9 min-w-0 flex-1 py-1.5 font-medium`}
                   value={phase.name}
                   onChange={(e) =>
                     updatePhase(phase.id, { name: e.target.value })
@@ -319,11 +318,11 @@ export function DealProjectPanel({
                   {phase.progressPct}%
                 </span>
               </div>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-2 sm:grid-cols-3">
                 <Field label="Start">
                   <input
                     type="date"
-                    className={inputClass}
+                    className={`${inputClass} min-h-9 py-1.5`}
                     value={phase.startDate}
                     onChange={(e) =>
                       updatePhase(phase.id, { startDate: e.target.value })
@@ -333,7 +332,7 @@ export function DealProjectPanel({
                 <Field label="End">
                   <input
                     type="date"
-                    className={inputClass}
+                    className={`${inputClass} min-h-9 py-1.5`}
                     value={phase.endDate}
                     onChange={(e) =>
                       updatePhase(phase.id, { endDate: e.target.value })
@@ -361,21 +360,21 @@ export function DealProjectPanel({
         </ul>
       </section>
 
-      <section className="panel space-y-5 p-5 sm:p-7">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+      <section className="panel space-y-3 p-3 sm:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="page-label">Job folder</p>
-            <h3 className="mt-2 font-display text-2xl tracking-tight text-ink">
+            <p className="page-label">Files</p>
+            <h3 className="mt-0.5 font-display text-xl tracking-tight text-ink">
               Files & photos
             </h3>
-            <p className="mt-1 max-w-lg text-sm text-muted">
-              Plans, bids, and progress pictures. Up to {PROJECT_MAX_FILES}{" "}
-              files, 12&nbsp;MB each.
+            <p className="mt-0.5 text-xs text-muted">
+              Up to {PROJECT_MAX_FILES} files, 12&nbsp;MB each
               {!user
-                ? " Stored in this browser until you sign in."
+                ? " · this browser until sign-in"
                 : deal.teamId
-                  ? " Shared with your team when this deal is team-shared."
-                  : " Saved on this device and the cloud when available."}
+                  ? " · team-shared when deal is"
+                  : " · device + cloud when available"}
+              .
             </p>
           </div>
           <div>
@@ -389,7 +388,7 @@ export function DealProjectPanel({
             />
             <button
               type="button"
-              className="btn-signal"
+              className="btn-signal !min-h-10"
               disabled={busy}
               onClick={() => fileInputRef.current?.click()}
             >
@@ -405,12 +404,11 @@ export function DealProjectPanel({
         ) : null}
 
         {project.files.length === 0 ? (
-          <p className="border border-dashed border-line bg-stone/30 px-4 py-10 text-center text-sm text-muted">
-            No files yet — drop plans and site photos here once you greenlight
-            the deal.
+          <p className="border border-dashed border-line bg-stone/30 px-3 py-6 text-center text-sm text-muted">
+            No files yet.
           </p>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {project.files.map((file) => (
               <li
                 key={file.id}
@@ -419,17 +417,17 @@ export function DealProjectPanel({
                 <button
                   type="button"
                   onClick={() => void openFile(file)}
-                  className="block min-h-36 w-full overflow-hidden bg-stone/40 text-left transition hover:bg-stone/60"
+                  className="block min-h-28 w-full overflow-hidden bg-stone/40 text-left transition hover:bg-stone/60"
                 >
                   {file.kind === "photo" && previewUrls[file.id] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={previewUrls[file.id]}
                       alt={file.name}
-                      className="h-36 w-full object-cover"
+                      className="h-28 w-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-36 flex-col items-center justify-center gap-1 px-3 text-center">
+                    <div className="flex h-28 flex-col items-center justify-center gap-1 px-3 text-center">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
                         {file.kind === "document" ? "Document" : "File"}
                       </span>
@@ -439,7 +437,7 @@ export function DealProjectPanel({
                     </div>
                   )}
                 </button>
-                <div className="flex items-start justify-between gap-2 border-t border-line px-3 py-2">
+                <div className="flex items-start justify-between gap-2 border-t border-line px-3 py-1.5">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-ink">
                       {file.name}
@@ -464,18 +462,17 @@ export function DealProjectPanel({
         )}
       </section>
 
-      <section className="panel space-y-4 p-5 sm:p-7">
-        <div>
-          <p className="page-label">Field notes</p>
-          <h3 className="mt-2 font-display text-2xl tracking-tight text-ink">
-            Job notes
-          </h3>
-          <p className="mt-1 text-sm text-muted">
-            One running note for the job — keeps daily life simple.
-          </p>
+      <section className="panel space-y-2 p-3 sm:p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <p className="page-label">Notes</p>
+            <h3 className="mt-0.5 font-display text-xl tracking-tight text-ink">
+              Job notes
+            </h3>
+          </div>
         </div>
         <textarea
-          className={`${inputClass} min-h-32`}
+          className={`${inputClass} min-h-20`}
           value={project.notes}
           onChange={(e) =>
             onChange(patchProject(deal, { notes: e.target.value }))
