@@ -582,22 +582,6 @@ export function DealWorkspace({
                   </Field>
                 </div>
 
-                <div className="flex items-center justify-between gap-3 border border-line bg-stone/30 px-3 py-2 text-sm">
-                  <span className="text-muted">
-                    Itemized build
-                    <button
-                      type="button"
-                      onClick={() => goTab("costs")}
-                      className="ml-1.5 font-semibold text-signal"
-                    >
-                      Edit
-                    </button>
-                  </span>
-                  <span className="font-display text-lg text-ink">
-                    {money(result.buildBudget)}
-                  </span>
-                </div>
-
                 <Field label="Financing">
                   <select
                     className={inputClass}
@@ -771,17 +755,8 @@ export function DealWorkspace({
                       value={money(result.totalAllIn)}
                     />
                     <Metric
-                      label="Cost of sale"
-                      value={money(result.costOfSale)}
-                    />
-                    <Metric
                       label="Net proceeds"
                       value={money(result.netSaleProceeds)}
-                    />
-                    <Metric
-                      label="Cash required"
-                      value={money(result.cashRequired)}
-                      tone="accent"
                     />
                     {buildingSf ? (
                       <Metric
@@ -789,21 +764,12 @@ export function DealWorkspace({
                         value={formatPsf(exitPsf)}
                       />
                     ) : null}
-                    <Metric
-                      label="% of ARV (all-in)"
-                      value={pct(result.pctOfArv)}
-                    />
                   </div>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Metric
                       label="All-in cost"
                       value={money(result.totalAllIn)}
-                    />
-                    <Metric
-                      label="Cash required"
-                      value={money(result.cashRequired)}
-                      tone="accent"
                     />
                     <Metric
                       label="NOI / mo"
