@@ -246,58 +246,86 @@ export function DealWorkspace({
         }
       >
         {tab === "property" ? (
-          <div className="space-y-5">
-            {/* Option A structure, condensed — one column, thin rules, tight grid */}
-            <p className="max-w-xl text-sm text-muted">
-              Name the deal, set scope and address, then physical specs for
-              costs and exit $/sf.
-            </p>
+          <div className="space-y-4">
+            <div className="border-b border-line pb-3">
+              <p className="page-label">Property</p>
+              <h2 className="page-title mt-0.5 text-2xl sm:text-3xl">
+                What are we underwriting?
+              </h2>
+              <p className="mt-1 max-w-lg text-sm text-muted">
+                Identity and address first. Building SF drives exit $/sf on
+                Final numbers.
+              </p>
+            </div>
 
-            <section className="space-y-3">
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-end">
-                <Field label="Deal / property name">
-                  <input
-                    className={inputClass}
-                    value={deal.property.name}
-                    onChange={(e) => patchProperty({ name: e.target.value })}
-                    placeholder="e.g. Heights duplex rebuild"
-                  />
-                </Field>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Build type">
-                    <select
-                      className={inputClass}
-                      value={deal.buildMode}
-                      onChange={(e) =>
-                        applyScope({
-                          buildMode: e.target.value as Deal["buildMode"],
-                        })
-                      }
-                    >
-                      <option value="rehab">Rehab / renovation</option>
-                      <option value="new_build">Ground-up build</option>
-                    </select>
-                  </Field>
-                  <Field label="Residential or commercial">
-                    <select
-                      className={inputClass}
-                      value={deal.propertyClass}
-                      onChange={(e) =>
-                        applyScope({
-                          propertyClass: e.target
-                            .value as Deal["propertyClass"],
-                        })
-                      }
-                    >
-                      <option value="residential">Residential</option>
-                      <option value="commercial">Commercial</option>
-                    </select>
-                  </Field>
+            {/* 1 — Identity */}
+            <section className="panel space-y-4 p-4 sm:p-5">
+              <p className="page-label">1 · Deal</p>
+              <Field label="Name">
+                <input
+                  className={inputClass}
+                  value={deal.property.name}
+                  onChange={(e) => patchProperty({ name: e.target.value })}
+                  placeholder="e.g. Heights duplex rebuild"
+                />
+              </Field>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+                    Build
+                  </p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {(
+                      [
+                        ["rehab", "Rehab"],
+                        ["new_build", "Ground-up"],
+                      ] as const
+                    ).map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        data-active={deal.buildMode === id}
+                        onClick={() => applyScope({ buildMode: id })}
+                        className="select-tile px-2 py-2 text-center text-xs font-semibold sm:text-sm"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+                    Class
+                  </p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {(
+                      [
+                        ["residential", "Residential"],
+                        ["commercial", "Commercial"],
+                      ] as const
+                    ).map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        data-active={deal.propertyClass === id}
+                        onClick={() =>
+                          applyScope({
+                            propertyClass: id,
+                          })
+                        }
+                        className="select-tile px-2 py-2 text-center text-xs font-semibold sm:text-sm"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <Field label="Description">
+
+              <Field label="Notes (optional)">
                 <textarea
-                  className={`${inputClass} min-h-16`}
+                  className={`${inputClass} min-h-12`}
                   value={deal.property.description}
                   onChange={(e) =>
                     patchProperty({ description: e.target.value })
@@ -307,151 +335,192 @@ export function DealWorkspace({
               </Field>
             </section>
 
-            <section className="space-y-3 border-t border-line pt-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                Location
-              </p>
+            {/* 2 — Location */}
+            <section className="panel space-y-4 p-4 sm:p-5">
+              <div>
+                <p className="page-label">2 · Location</p>
+                <p className="mt-0.5 text-sm text-muted">
+                  Search street, then confirm city / state / zip.
+                </p>
+              </div>
               <AddressLookup
                 property={deal.property}
                 onStreetChange={(address) => patchProperty({ address })}
                 onApply={(patch) => patchProperty(patch)}
               />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Field label="City">
-                  <input
-                    className={inputClass}
-                    value={deal.property.city}
-                    onChange={(e) => patchProperty({ city: e.target.value })}
-                  />
-                </Field>
-                <Field label="State">
-                  <input
-                    className={inputClass}
-                    value={deal.property.state}
-                    onChange={(e) => patchProperty({ state: e.target.value })}
-                  />
-                </Field>
-                <Field label="Zip">
-                  <input
-                    className={inputClass}
-                    value={deal.property.zip}
-                    onChange={(e) => patchProperty({ zip: e.target.value })}
-                  />
-                </Field>
-                <Field label="APN">
-                  <input
-                    className={inputClass}
-                    value={deal.property.apn}
-                    onChange={(e) => patchProperty({ apn: e.target.value })}
-                  />
-                </Field>
+              <div className="grid gap-3 sm:grid-cols-6">
+                <div className="sm:col-span-2">
+                  <Field label="City">
+                    <input
+                      className={inputClass}
+                      value={deal.property.city}
+                      onChange={(e) => patchProperty({ city: e.target.value })}
+                    />
+                  </Field>
+                </div>
+                <div className="sm:col-span-1">
+                  <Field label="State">
+                    <input
+                      className={inputClass}
+                      value={deal.property.state}
+                      onChange={(e) =>
+                        patchProperty({ state: e.target.value })
+                      }
+                    />
+                  </Field>
+                </div>
+                <div className="sm:col-span-1">
+                  <Field label="Zip">
+                    <input
+                      className={inputClass}
+                      value={deal.property.zip}
+                      onChange={(e) => patchProperty({ zip: e.target.value })}
+                    />
+                  </Field>
+                </div>
+                <div className="sm:col-span-2">
+                  <Field label="APN (optional)">
+                    <input
+                      className={inputClass}
+                      value={deal.property.apn}
+                      onChange={(e) => patchProperty({ apn: e.target.value })}
+                    />
+                  </Field>
+                </div>
               </div>
             </section>
 
-            <section className="space-y-3 border-t border-line pt-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                Physical
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Field label="Property type">
-                  <select
-                    className={inputClass}
-                    value={deal.property.propertyType}
-                    onChange={(e) =>
-                      patchProperty({ propertyType: e.target.value })
-                    }
-                  >
-                    {types.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Condition">
-                  <input
-                    className={inputClass}
-                    value={deal.property.condition}
-                    onChange={(e) =>
-                      patchProperty({ condition: e.target.value })
-                    }
-                  />
-                </Field>
-                <Field label="Building sf">
-                  <NumberInput
-                    value={deal.property.buildingSf}
-                    onChange={(buildingSf) => patchProperty({ buildingSf })}
-                    min={0}
-                    step={50}
-                  />
-                </Field>
-                <Field label="Lot sf">
-                  <NumberInput
-                    value={deal.property.lotSf}
-                    onChange={(lotSf) => patchProperty({ lotSf })}
-                    min={0}
-                    step={100}
-                  />
-                </Field>
-                <Field label="Year built">
-                  <NumberInput
-                    value={deal.property.yearBuilt}
-                    onChange={(yearBuilt) => patchProperty({ yearBuilt })}
-                    min={1800}
-                    max={2100}
-                  />
-                </Field>
-                <Field label="Units">
-                  <NumberInput
-                    value={deal.property.units}
-                    onChange={(units) => patchProperty({ units })}
-                    min={0}
-                  />
-                </Field>
-                {deal.propertyClass === "residential" ? (
-                  <>
-                    <Field label="Bedrooms">
+            {/* 3 — Physical */}
+            <section className="panel space-y-4 p-4 sm:p-5">
+              <div>
+                <p className="page-label">3 · Size & layout</p>
+                <p className="mt-0.5 text-sm text-muted">
+                  Building square feet is the one field Final numbers needs for
+                  exit $/sf.
+                </p>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="space-y-3 border border-line bg-stone/20 p-3 sm:p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+                    Size
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Building sf">
                       <NumberInput
-                        value={deal.property.bedrooms}
-                        onChange={(bedrooms) => patchProperty({ bedrooms })}
-                        min={0}
-                      />
-                    </Field>
-                    <Field label="Full baths">
-                      <NumberInput
-                        value={deal.property.bathsFull}
-                        onChange={(bathsFull) =>
-                          patchProperty({ bathsFull })
+                        value={deal.property.buildingSf}
+                        onChange={(buildingSf) =>
+                          patchProperty({ buildingSf })
                         }
                         min={0}
-                        step={0.5}
+                        step={50}
                       />
                     </Field>
-                  </>
-                ) : (
-                  <>
-                    <Field label="Floors">
+                    <Field label="Lot sf">
                       <NumberInput
-                        value={deal.property.floors}
-                        onChange={(floors) => patchProperty({ floors })}
+                        value={deal.property.lotSf}
+                        onChange={(lotSf) => patchProperty({ lotSf })}
+                        min={0}
+                        step={100}
+                      />
+                    </Field>
+                    <Field label="Year built">
+                      <NumberInput
+                        value={deal.property.yearBuilt}
+                        onChange={(yearBuilt) =>
+                          patchProperty({ yearBuilt })
+                        }
+                        min={1800}
+                        max={2100}
+                      />
+                    </Field>
+                    <Field label="Units">
+                      <NumberInput
+                        value={deal.property.units}
+                        onChange={(units) => patchProperty({ units })}
                         min={0}
                       />
                     </Field>
-                    <Field label="Zoning">
+                  </div>
+                </div>
+
+                <div className="space-y-3 border border-line bg-stone/20 p-3 sm:p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+                    Layout
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Property type">
+                      <select
+                        className={inputClass}
+                        value={deal.property.propertyType}
+                        onChange={(e) =>
+                          patchProperty({ propertyType: e.target.value })
+                        }
+                      >
+                        {types.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Condition">
                       <input
                         className={inputClass}
-                        value={deal.property.zoning}
+                        value={deal.property.condition}
                         onChange={(e) =>
-                          patchProperty({ zoning: e.target.value })
+                          patchProperty({ condition: e.target.value })
                         }
                       />
                     </Field>
-                  </>
-                )}
+                    {deal.propertyClass === "residential" ? (
+                      <>
+                        <Field label="Bedrooms">
+                          <NumberInput
+                            value={deal.property.bedrooms}
+                            onChange={(bedrooms) =>
+                              patchProperty({ bedrooms })
+                            }
+                            min={0}
+                          />
+                        </Field>
+                        <Field label="Full baths">
+                          <NumberInput
+                            value={deal.property.bathsFull}
+                            onChange={(bathsFull) =>
+                              patchProperty({ bathsFull })
+                            }
+                            min={0}
+                            step={0.5}
+                          />
+                        </Field>
+                      </>
+                    ) : (
+                      <>
+                        <Field label="Floors">
+                          <NumberInput
+                            value={deal.property.floors}
+                            onChange={(floors) => patchProperty({ floors })}
+                            min={0}
+                          />
+                        </Field>
+                        <Field label="Zoning">
+                          <input
+                            className={inputClass}
+                            value={deal.property.zoning}
+                            onChange={(e) =>
+                              patchProperty({ zoning: e.target.value })
+                            }
+                          />
+                        </Field>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             </section>
 
-            <div className="flex justify-end border-t border-line pt-5">
+            <div className="flex justify-end pt-1">
               <button
                 type="button"
                 className="btn-signal w-full sm:w-auto"
