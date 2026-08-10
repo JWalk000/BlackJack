@@ -47,33 +47,38 @@ export function DealDecisionSnapshot({
   return (
     <section
       id="decision"
-      className={`border p-5 sm:p-6 ${toneRing}`}
+      className={`border px-4 py-3 sm:px-5 sm:py-4 ${toneRing}`}
       aria-label="Deal decision snapshot"
     >
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
           <p className="page-label">Decision</p>
-          <div className="mt-2 flex flex-wrap items-baseline gap-3">
-            <h2 className={`font-display text-3xl tracking-tight sm:text-4xl ${toneText}`}>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2
+              className={`font-display text-2xl tracking-tight sm:text-3xl ${toneText}`}
+            >
               {verdict.label}
             </h2>
             <p className="max-w-xl text-sm text-muted">{verdict.detail}</p>
           </div>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-          <Link href={packageHref} className="btn-signal w-full sm:w-auto">
+          <Link
+            href={packageHref}
+            className="btn-signal w-full !min-h-10 sm:w-auto"
+          >
             Bank package
           </Link>
           <Link
             href={`${packageHref}?print=1`}
-            className="btn-ghost w-full sm:w-auto"
+            className="btn-ghost w-full !min-h-10 sm:w-auto"
           >
             Print decision package
           </Link>
         </div>
       </div>
 
-      <dl className="mt-6 grid gap-px border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+      <dl className="mt-3 grid gap-px border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
         <Snap
           label="Exit value (ARV)"
           value={money(deal.assumptions.arv)}
@@ -109,12 +114,13 @@ export function DealDecisionSnapshot({
         />
       </dl>
 
-      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted">
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted">
         <span>Cash required {money(result.cashRequired)}</span>
         <span>% of ARV {pct(result.pctOfArv)}</span>
         {budget.contingencyPct > 0 ? (
           <span>
-            Contingency {budget.contingencyPct}% ({money(budget.contingencyDollars)})
+            Contingency {budget.contingencyPct}% (
+            {money(budget.contingencyDollars)})
           </span>
         ) : null}
         {deal.exitStrategy === "flip" ? (
@@ -137,12 +143,12 @@ function Snap({
   tone?: "profit" | "loss" | "signal";
 }) {
   return (
-    <div className="bg-paper px-4 py-3">
-      <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+    <div className="bg-paper px-3 py-2">
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
         {label}
       </dt>
       <dd
-        className={`mt-1 font-display text-xl tracking-tight ${
+        className={`mt-0.5 font-display text-lg tracking-tight sm:text-xl ${
           tone === "profit"
             ? "text-profit"
             : tone === "loss"

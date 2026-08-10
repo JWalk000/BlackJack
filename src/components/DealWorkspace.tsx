@@ -472,34 +472,32 @@ export function DealWorkspace({
         ) : null}
 
         {tab === "analysis" ? (
-          <div className="space-y-8">
-            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-2 border-b border-line pb-3">
               <div>
                 <p className="page-label">Analysis</p>
-                <h2 className="page-title mt-2 text-3xl sm:text-4xl">
+                <h2 className="page-title mt-1 text-2xl sm:text-3xl">
                   Final numbers
                 </h2>
-                <p className="mt-2 max-w-xl text-sm text-muted">
-                  Decision first, then assumptions and full results. Same budget
-                  strip as Costs — bank package opens from here.
-                </p>
               </div>
             </div>
 
-            <DealDecisionSnapshot
-              deal={deal}
-              packageHref={`/deals/${deal.id}/package`}
-            />
+            <div className="space-y-2">
+              <DealDecisionSnapshot
+                deal={deal}
+                packageHref={`/deals/${deal.id}/package`}
+              />
 
-            <DealBudgetStrip
-              deal={deal}
-              mode="summary"
-              onGoToCosts={() => goTab("costs")}
-            />
+              <DealBudgetStrip
+                deal={deal}
+                mode="summary"
+                onGoToCosts={() => goTab("costs")}
+              />
 
-            <MarketCompsPanel deal={deal} />
+              <MarketCompsPanel deal={deal} />
+            </div>
 
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+          <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
             <section className="panel space-y-6 p-5 sm:p-7">
               <div>
                 <p className="page-label">Assumptions</p>

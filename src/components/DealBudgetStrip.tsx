@@ -46,17 +46,17 @@ export function DealBudgetStrip({
 
   return (
     <div
-      className={`border px-4 py-4 sm:px-5 ${
+      className={`border px-3 py-3 sm:px-4 ${
         b.status === "over"
           ? "border-loss/40 bg-[color-mix(in_srgb,var(--loss)_8%,var(--paper))]"
           : overish
             ? "border-signal/35 bg-signal/5"
             : "border-line bg-paper/95"
-      } ${mode === "edit" ? "sticky top-0 z-20 backdrop-blur-sm" : ""}`}
+      } ${mode === "edit" ? "sticky top-0 z-20 px-4 py-4 backdrop-blur-sm sm:px-5" : ""}`}
       role="region"
       aria-label="Deal construction budget"
     >
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
           Construction budget
         </p>
@@ -127,26 +127,30 @@ export function DealBudgetStrip({
           />
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <BudgetStat
             label="Deal budget"
             value={b.budgetSet ? money(b.costBudget) : "Not set"}
             muted={!b.budgetSet}
+            compact
           />
           <BudgetStat
             label="Spent"
             value={money(b.spent)}
             danger={b.status === "over"}
+            compact
           />
           <BudgetStat
             label={`Contingency${b.contingencyPct > 0 ? ` (${b.contingencyPct}%)` : ""}`}
             value={
               b.contingencyPct > 0 ? money(b.contingencyDollars) : "None"
             }
+            compact
           />
           <BudgetStat
             label="Working target"
             value={b.budgetSet ? money(b.workingBudget) : "—"}
+            compact
           />
           <BudgetStat
             label={b.status === "over" ? "Over by" : "Remaining"}
@@ -157,13 +161,14 @@ export function DealBudgetStrip({
             }
             danger={b.status === "over"}
             accent={b.status === "watching" || b.status === "into_contingency"}
+            compact
           />
         </div>
       )}
 
       {b.budgetSet ? (
-        <div className="mt-4">
-          <div className="h-2 overflow-hidden bg-stone">
+        <div className={mode === "summary" ? "mt-2" : "mt-4"}>
+          <div className="h-1.5 overflow-hidden bg-stone">
             <div
               className={`h-full transition-[width,background-color] ${
                 b.status === "over"
@@ -176,14 +181,16 @@ export function DealBudgetStrip({
             />
           </div>
           {b.usedPct != null ? (
-            <p className="mt-1.5 text-xs text-muted">{b.usedPct}% of deal budget used</p>
+            <p className="mt-1 text-xs text-muted">
+              {b.usedPct}% of deal budget used
+            </p>
           ) : null}
         </div>
       ) : null}
 
       {msg ? (
         <p
-          className={`mt-3 text-sm ${
+          className={`${mode === "summary" ? "mt-2" : "mt-3"} text-sm ${
             b.status === "over"
               ? "font-medium text-loss"
               : b.status === "into_contingency"
@@ -205,20 +212,22 @@ function BudgetStat({
   danger,
   accent,
   muted,
+  compact,
 }: {
   label: string;
   value: string;
   danger?: boolean;
   accent?: boolean;
   muted?: boolean;
+  compact?: boolean;
 }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
         {label}
       </p>
       <p
-        className={`mt-1.5 font-display text-xl tracking-tight sm:text-2xl ${
+        className={`${compact ? "mt-0.5 text-lg sm:text-xl" : "mt-1.5 text-xl sm:text-2xl"} font-display tracking-tight ${
           danger
             ? "text-loss"
             : accent
