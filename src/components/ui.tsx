@@ -12,33 +12,21 @@ export function Field({
   label,
   children,
   hint,
-  dense,
 }: {
   label: string;
   children: ReactNode;
   hint?: string;
-  /** Tighter labels / spacing for dense forms (e.g. Property tab). */
-  dense?: boolean;
 }) {
   return (
-    <label className="block min-w-0">
-      <span
-        className={
-          dense
-            ? "text-[10px] font-semibold uppercase tracking-[0.12em] text-muted"
-            : "text-[11px] font-semibold uppercase tracking-[0.16em] text-muted"
-        }
-      >
+    <label className="block">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
         {label}
       </span>
-      <div className={dense ? "mt-1" : "mt-1.5"}>{children}</div>
+      <div className="mt-1.5">{children}</div>
       {hint ? <p className="mt-1 text-xs text-muted">{hint}</p> : null}
     </label>
   );
 }
-
-/** Compact controls for Property tab sheets. */
-export const inputClassDense = "studio-input studio-input--dense";
 
 export const inputClass = "studio-input";
 
@@ -216,7 +204,6 @@ export function NumberInput({
   max,
   step = 1,
   placeholder = "",
-  className,
 }: {
   value: number | null;
   onChange: (n: number | null) => void;
@@ -224,7 +211,6 @@ export function NumberInput({
   max?: number;
   step?: number;
   placeholder?: string;
-  className?: string;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const inputId = useId();
@@ -248,7 +234,7 @@ export function NumberInput({
       autoComplete="off"
       spellCheck={false}
       data-step={step}
-      className={className ? `${numberInputClass} ${className}` : numberInputClass}
+      className={numberInputClass}
       value={display}
       placeholder={placeholder}
       onFocus={(e) => {
