@@ -138,21 +138,23 @@ function Snap({
   value: string;
   tone?: "profit" | "loss" | "signal";
 }) {
+  const valueColor =
+    tone === "profit"
+      ? "var(--profit)"
+      : tone === "loss"
+        ? "#c4281a"
+        : tone === "signal"
+          ? "var(--signal)"
+          : "var(--ink)";
+
   return (
     <div className="bg-paper px-3 py-2">
       <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
         {label}
       </dt>
       <dd
-        className={`mt-0.5 font-display text-lg tracking-tight sm:text-xl ${
-          tone === "profit"
-            ? "text-profit"
-            : tone === "loss"
-              ? "text-loss"
-              : tone === "signal"
-                ? "text-signal"
-                : "text-ink"
-        }`}
+        className="mt-0.5 font-display text-lg tracking-tight sm:text-xl"
+        style={{ color: valueColor }}
       >
         {value}
       </dd>
