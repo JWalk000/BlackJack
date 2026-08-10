@@ -95,7 +95,11 @@ export function DealDecisionSnapshot({
           label="Exit value (ARV)"
           value={money(deal.assumptions.arv)}
         />
-        <Snap label="All-in cost" value={money(result.totalAllIn)} />
+        <Snap
+          label="All-in cost"
+          value={money(result.totalAllIn)}
+          tone="loss"
+        />
         {deal.exitStrategy === "flip" ? (
           <Snap
             label="Projected profit"
