@@ -586,31 +586,32 @@ export function DealWorkspace({
               </div>
             </div>
 
-            {/* Single column: assumptions, then stack under them */}
-            <section className="panel space-y-4 p-4 sm:p-5">
+            {/* Single column: assumptions, then stack — compact grid */}
+            <section className="panel space-y-3 p-3 sm:p-4">
               <p className="page-label">Underwrite</p>
 
-              <div className="space-y-3">
-                <Field
-                  label={
-                    deal.exitStrategy === "flip"
-                      ? "Exit value (ARV)"
-                      : "Stabilized value (ARV)"
-                  }
-                >
-                  <MoneyInput
-                    value={deal.assumptions.arv}
-                    onChange={(arv) => {
-                      const next: Partial<typeof deal.assumptions> = { arv };
-                      if (!deal.assumptions.closingCostsManual) {
-                        next.closingCosts = defaultClosingCosts(arv);
-                      }
-                      patchAssumptions(next);
-                    }}
-                  />
-                </Field>
-
-                <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-x-3 gap-y-2 sm:grid-cols-6">
+                <div className="sm:col-span-3">
+                  <Field
+                    label={
+                      deal.exitStrategy === "flip"
+                        ? "Exit value (ARV)"
+                        : "Stabilized value (ARV)"
+                    }
+                  >
+                    <MoneyInput
+                      value={deal.assumptions.arv}
+                      onChange={(arv) => {
+                        const next: Partial<typeof deal.assumptions> = { arv };
+                        if (!deal.assumptions.closingCostsManual) {
+                          next.closingCosts = defaultClosingCosts(arv);
+                        }
+                        patchAssumptions(next);
+                      }}
+                    />
+                  </Field>
+                </div>
+                <div className="sm:col-span-3">
                   <Field label="Closing costs" hint="Default 4% of ARV">
                     <MoneyInput
                       value={
@@ -626,6 +627,9 @@ export function DealWorkspace({
                       }
                     />
                   </Field>
+                </div>
+
+                <div className="sm:col-span-2">
                   <Field
                     label={
                       deal.buildMode === "new_build"
@@ -642,8 +646,65 @@ export function DealWorkspace({
                     />
                   </Field>
                 </div>
+                {deal.exitStrategy === "flip" ? (
+                  <>
+                    <div className="sm:col-span-2">
+                      <Field label="Months to sell">
+                        <NumberInput
+                          value={deal.assumptions.monthsToSaleOrRent}
+                          onChange={(v) =>
+                            patchAssumptions({ monthsToSaleOrRent: v ?? 0 })
+                          }
+                          min={0}
+                        />
+                      </Field>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Field label="Cost of sale %">
+                        <NumberInput
+                          value={deal.assumptions.costOfSalePct}
+                          onChange={(v) =>
+                            patchAssumptions({ costOfSalePct: v ?? 0 })
+                          }
+                          min={0}
+                          max={20}
+                          step={0.25}
+                        />
+                      </Field>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="sm:col-span-2">
+                      <Field label="Gross rent / mo">
+                        <MoneyInput
+                          value={deal.assumptions.grossRentMonthly}
+                          onChange={(grossRentMonthly) =>
+                            patchAssumptions({ grossRentMonthly })
+                          }
+                        />
+                      </Field>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Field label="OpEx / mo">
+                        <MoneyInput
+                          value={deal.assumptions.operatingExpensesMonthly}
+                          onChange={(operatingExpensesMonthly) =>
+                            patchAssumptions({ operatingExpensesMonthly })
+                          }
+                        />
+                      </Field>
+                    </div>
+                  </>
+                )}
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div
+                  className={
+                    deal.financing.style !== "all_cash"
+                      ? "sm:col-span-3"
+                      : "sm:col-span-6"
+                  }
+                >
                   <Field label="Financing">
                     <select
                       className={inputClass}
@@ -661,155 +722,134 @@ export function DealWorkspace({
                       </option>
                     </select>
                   </Field>
-                  {deal.exitStrategy === "flip" ? (
-                    <Field label="Months to sell">
-                      <NumberInput
-                        value={deal.assumptions.monthsToSaleOrRent}
-                        onChange={(v) =>
-                          patchAssumptions({ monthsToSaleOrRent: v ?? 0 })
-                        }
-                        min={0}
-                      />
-                    </Field>
-                  ) : (
-                    <Field label="Gross rent / mo">
-                      <MoneyInput
-                        value={deal.assumptions.grossRentMonthly}
-                        onChange={(grossRentMonthly) =>
-                          patchAssumptions({ grossRentMonthly })
-                        }
-                      />
-                    </Field>
-                  )}
                 </div>
-
                 {deal.financing.style !== "all_cash" ? (
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <Field label="LTV %">
-                      <NumberInput
-                        value={deal.financing.ltvPct}
-                        onChange={(v) => patchFinancing({ ltvPct: v ?? 0 })}
-                        min={0}
-                        max={100}
-                      />
-                    </Field>
-                    <Field label="Rate %">
-                      <NumberInput
-                        value={deal.financing.interestRatePct}
-                        onChange={(v) =>
-                          patchFinancing({ interestRatePct: v ?? 0 })
-                        }
-                        min={0}
-                        step={0.125}
-                      />
-                    </Field>
-                    <Field label="Points %">
-                      <NumberInput
-                        value={deal.financing.pointsPct}
-                        onChange={(v) =>
-                          patchFinancing({ pointsPct: v ?? 0 })
-                        }
-                        min={0}
-                        step={0.25}
-                      />
-                    </Field>
-                  </div>
+                  <>
+                    <div className="sm:col-span-1">
+                      <Field label="LTV %">
+                        <NumberInput
+                          value={deal.financing.ltvPct}
+                          onChange={(v) =>
+                            patchFinancing({ ltvPct: v ?? 0 })
+                          }
+                          min={0}
+                          max={100}
+                        />
+                      </Field>
+                    </div>
+                    <div className="sm:col-span-1">
+                      <Field label="Rate %">
+                        <NumberInput
+                          value={deal.financing.interestRatePct}
+                          onChange={(v) =>
+                            patchFinancing({ interestRatePct: v ?? 0 })
+                          }
+                          min={0}
+                          step={0.125}
+                        />
+                      </Field>
+                    </div>
+                    <div className="sm:col-span-1">
+                      <Field label="Points %">
+                        <NumberInput
+                          value={deal.financing.pointsPct}
+                          onChange={(v) =>
+                            patchFinancing({ pointsPct: v ?? 0 })
+                          }
+                          min={0}
+                          step={0.25}
+                        />
+                      </Field>
+                    </div>
+                  </>
                 ) : null}
 
-                {deal.exitStrategy === "flip" ? (
-                  <Field label="Cost of sale %">
-                    <NumberInput
-                      value={deal.assumptions.costOfSalePct}
-                      onChange={(v) =>
-                        patchAssumptions({ costOfSalePct: v ?? 0 })
-                      }
-                      min={0}
-                      max={20}
-                      step={0.25}
-                    />
-                  </Field>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Field label="OpEx / mo">
-                      <MoneyInput
-                        value={deal.assumptions.operatingExpensesMonthly}
-                        onChange={(operatingExpensesMonthly) =>
-                          patchAssumptions({ operatingExpensesMonthly })
-                        }
-                      />
-                    </Field>
-                    <Field label="Vacancy %">
-                      <NumberInput
-                        value={deal.assumptions.vacancyPct}
-                        onChange={(v) =>
-                          patchAssumptions({ vacancyPct: v ?? 0 })
-                        }
-                        min={0}
-                        max={100}
-                      />
-                    </Field>
-                    <Field label="Other income / mo">
-                      <MoneyInput
-                        value={deal.assumptions.otherIncomeMonthly}
-                        onChange={(otherIncomeMonthly) =>
-                          patchAssumptions({ otherIncomeMonthly })
-                        }
-                      />
-                    </Field>
-                    <Field label="Refinance after rehab?">
-                      <select
-                        className={inputClass}
-                        value={deal.assumptions.refinance ? "yes" : "no"}
-                        onChange={(e) =>
-                          patchAssumptions({
-                            refinance: e.target.value === "yes",
-                          })
-                        }
-                      >
-                        <option value="no">No</option>
-                        <option value="yes">Yes</option>
-                      </select>
-                    </Field>
+                {deal.exitStrategy === "hold" ? (
+                  <>
+                    <div className="sm:col-span-2">
+                      <Field label="Vacancy %">
+                        <NumberInput
+                          value={deal.assumptions.vacancyPct}
+                          onChange={(v) =>
+                            patchAssumptions({ vacancyPct: v ?? 0 })
+                          }
+                          min={0}
+                          max={100}
+                        />
+                      </Field>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Field label="Other income / mo">
+                        <MoneyInput
+                          value={deal.assumptions.otherIncomeMonthly}
+                          onChange={(otherIncomeMonthly) =>
+                            patchAssumptions({ otherIncomeMonthly })
+                          }
+                        />
+                      </Field>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Field label="Refinance after rehab?">
+                        <select
+                          className={inputClass}
+                          value={deal.assumptions.refinance ? "yes" : "no"}
+                          onChange={(e) =>
+                            patchAssumptions({
+                              refinance: e.target.value === "yes",
+                            })
+                          }
+                        >
+                          <option value="no">No</option>
+                          <option value="yes">Yes</option>
+                        </select>
+                      </Field>
+                    </div>
                     {deal.assumptions.refinance ? (
                       <>
-                        <Field label="Perm LTV %">
-                          <NumberInput
-                            value={deal.assumptions.permanentLtvPct}
-                            onChange={(v) =>
-                              patchAssumptions({ permanentLtvPct: v ?? 0 })
-                            }
-                            min={0}
-                            max={100}
-                          />
-                        </Field>
-                        <Field label="Rate %">
-                          <NumberInput
-                            value={deal.assumptions.permanentRatePct}
-                            onChange={(v) =>
-                              patchAssumptions({ permanentRatePct: v ?? 0 })
-                            }
-                            min={0}
-                            step={0.125}
-                          />
-                        </Field>
-                        <Field label="Term yrs">
-                          <NumberInput
-                            value={deal.assumptions.permanentTermYears}
-                            onChange={(v) =>
-                              patchAssumptions({
-                                permanentTermYears: v ?? 0,
-                              })
-                            }
-                            min={1}
-                          />
-                        </Field>
+                        <div className="sm:col-span-2">
+                          <Field label="Perm LTV %">
+                            <NumberInput
+                              value={deal.assumptions.permanentLtvPct}
+                              onChange={(v) =>
+                                patchAssumptions({ permanentLtvPct: v ?? 0 })
+                              }
+                              min={0}
+                              max={100}
+                            />
+                          </Field>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <Field label="Rate %">
+                            <NumberInput
+                              value={deal.assumptions.permanentRatePct}
+                              onChange={(v) =>
+                                patchAssumptions({ permanentRatePct: v ?? 0 })
+                              }
+                              min={0}
+                              step={0.125}
+                            />
+                          </Field>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <Field label="Term yrs">
+                            <NumberInput
+                              value={deal.assumptions.permanentTermYears}
+                              onChange={(v) =>
+                                patchAssumptions({
+                                  permanentTermYears: v ?? 0,
+                                })
+                              }
+                              min={1}
+                            />
+                          </Field>
+                        </div>
                       </>
                     ) : null}
-                  </div>
-                )}
+                  </>
+                ) : null}
               </div>
 
-              <div className="border-t border-line pt-4">
+              <div className="border-t border-line pt-3">
                 <AnalysisStackPanel
                   deal={deal}
                   result={result}
@@ -1000,8 +1040,8 @@ function AnalysisStackPanel({
   );
 
   if (embedded) {
-    return <div className="space-y-4">{body}</div>;
+    return <div className="space-y-3">{body}</div>;
   }
 
-  return <section className="panel space-y-4 p-4">{body}</section>;
+  return <section className="panel space-y-3 p-3 sm:p-4">{body}</section>;
 }
