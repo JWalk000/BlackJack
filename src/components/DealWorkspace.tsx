@@ -19,6 +19,7 @@ import {
   NumberInput,
   Metric,
   inputClass,
+  inputClassDense,
 } from "./ui";
 
 type Tab = "property" | "costs" | "analysis" | "project";
@@ -137,7 +138,11 @@ export function DealWorkspace({
         onFlushSave?.();
       }}
     >
-      <div className="flex flex-col gap-5 border-b border-line pb-8 sm:flex-row sm:items-end sm:justify-between">
+      <div
+        className={`flex flex-col gap-3 border-b border-line sm:flex-row sm:items-end sm:justify-between ${
+          tab === "property" ? "pb-4" : "gap-5 pb-8"
+        }`}
+      >
         <div className="min-w-0">
           <p className="page-label">
             {deal.buildMode === "new_build" ? "Ground-up" : "Rehab"}
@@ -145,7 +150,13 @@ export function DealWorkspace({
             {deal.propertyClass}
             {deal.teamId ? " · Team deal" : ""}
           </p>
-          <h1 className="page-title mt-2 break-words text-3xl sm:text-5xl">
+          <h1
+            className={`page-title mt-1 break-words tracking-tight ${
+              tab === "property"
+                ? "text-2xl sm:text-3xl"
+                : "mt-2 text-3xl sm:text-5xl"
+            }`}
+          >
             {deal.property.name.trim() ||
               deal.property.address.trim() ||
               "Untitled deal"}
@@ -226,103 +237,95 @@ export function DealWorkspace({
         ))}
       </div>
 
-      <div className="mt-10">
+      <div className={tab === "property" ? "mt-5" : "mt-10"}>
         {tab === "property" ? (
-          <div className="space-y-5">
-            {/* Option A structure, condensed — one column, thin rules, tight grid */}
-            <p className="max-w-xl text-sm text-muted">
-              Name the deal, set scope and address, then physical specs for
-              costs and exit $/sf.
-            </p>
-
-            <section className="space-y-3">
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-end">
-                <Field label="Deal / property name">
-                  <input
-                    className={inputClass}
-                    value={deal.property.name}
-                    onChange={(e) => patchProperty({ name: e.target.value })}
-                    placeholder="e.g. Heights duplex rebuild"
-                  />
-                </Field>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Build type">
-                    <select
-                      className={inputClass}
-                      value={deal.buildMode}
-                      onChange={(e) =>
-                        applyScope({
-                          buildMode: e.target.value as Deal["buildMode"],
-                        })
-                      }
-                    >
-                      <option value="rehab">Rehab / renovation</option>
-                      <option value="new_build">Ground-up build</option>
-                    </select>
-                  </Field>
-                  <Field label="Residential or commercial">
-                    <select
-                      className={inputClass}
-                      value={deal.propertyClass}
-                      onChange={(e) =>
-                        applyScope({
-                          propertyClass: e.target
-                            .value as Deal["propertyClass"],
-                        })
-                      }
-                    >
-                      <option value="residential">Residential</option>
-                      <option value="commercial">Commercial</option>
-                    </select>
-                  </Field>
-                </div>
-              </div>
-              <Field label="Description">
-                <textarea
-                  className={`${inputClass} min-h-16`}
+          <div className="space-y-3">
+            {/* Tight Option A: identity + location + physical in less vertical space */}
+            <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <Field label="Name" dense>
+                <input
+                  className={inputClassDense}
+                  value={deal.property.name}
+                  onChange={(e) => patchProperty({ name: e.target.value })}
+                  placeholder="Deal name"
+                />
+              </Field>
+              <Field label="Build type" dense>
+                <select
+                  className={inputClassDense}
+                  value={deal.buildMode}
+                  onChange={(e) =>
+                    applyScope({
+                      buildMode: e.target.value as Deal["buildMode"],
+                    })
+                  }
+                >
+                  <option value="rehab">Rehab / renovation</option>
+                  <option value="new_build">Ground-up build</option>
+                </select>
+              </Field>
+              <Field label="Class" dense>
+                <select
+                  className={inputClassDense}
+                  value={deal.propertyClass}
+                  onChange={(e) =>
+                    applyScope({
+                      propertyClass: e.target
+                        .value as Deal["propertyClass"],
+                    })
+                  }
+                >
+                  <option value="residential">Residential</option>
+                  <option value="commercial">Commercial</option>
+                </select>
+              </Field>
+              <Field label="Description" dense>
+                <input
+                  className={inputClassDense}
                   value={deal.property.description}
                   onChange={(e) =>
                     patchProperty({ description: e.target.value })
                   }
-                  placeholder="Short note on the play…"
+                  placeholder="Optional note"
                 />
               </Field>
             </section>
 
-            <section className="space-y-3 border-t border-line pt-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+            <section className="space-y-2 border-t border-line pt-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                 Location
               </p>
               <AddressLookup
                 property={deal.property}
                 onStreetChange={(address) => patchProperty({ address })}
                 onApply={(patch) => patchProperty(patch)}
+                dense
               />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Field label="City">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <Field label="City" dense>
                   <input
-                    className={inputClass}
+                    className={inputClassDense}
                     value={deal.property.city}
                     onChange={(e) => patchProperty({ city: e.target.value })}
                   />
                 </Field>
-                <Field label="State">
+                <Field label="State" dense>
                   <input
-                    className={inputClass}
+                    className={inputClassDense}
                     value={deal.property.state}
                     onChange={(e) => patchProperty({ state: e.target.value })}
                   />
                 </Field>
-                <Field label="Zip">
+                <Field label="Zip" dense>
                   <input
-                    className={inputClass}
+                    className={inputClassDense}
                     value={deal.property.zip}
                     onChange={(e) => patchProperty({ zip: e.target.value })}
                   />
                 </Field>
-                <Field label="APN">
+                <Field label="APN" dense>
                   <input
-                    className={inputClass}
+                    className={inputClassDense}
                     value={deal.property.apn}
                     onChange={(e) => patchProperty({ apn: e.target.value })}
                   />
@@ -330,14 +333,14 @@ export function DealWorkspace({
               </div>
             </section>
 
-            <section className="space-y-3 border-t border-line pt-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+            <section className="space-y-2 border-t border-line pt-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                 Physical
               </p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Field label="Property type">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <Field label="Property type" dense>
                   <select
-                    className={inputClass}
+                    className={inputClassDense}
                     value={deal.property.propertyType}
                     onChange={(e) =>
                       patchProperty({ propertyType: e.target.value })
@@ -350,41 +353,45 @@ export function DealWorkspace({
                     ))}
                   </select>
                 </Field>
-                <Field label="Condition">
+                <Field label="Condition" dense>
                   <input
-                    className={inputClass}
+                    className={inputClassDense}
                     value={deal.property.condition}
                     onChange={(e) =>
                       patchProperty({ condition: e.target.value })
                     }
                   />
                 </Field>
-                <Field label="Building sf">
+                <Field label="Building sf" dense>
                   <NumberInput
+                    className="studio-input--dense"
                     value={deal.property.buildingSf}
                     onChange={(buildingSf) => patchProperty({ buildingSf })}
                     min={0}
                     step={50}
                   />
                 </Field>
-                <Field label="Lot sf">
+                <Field label="Lot sf" dense>
                   <NumberInput
+                    className="studio-input--dense"
                     value={deal.property.lotSf}
                     onChange={(lotSf) => patchProperty({ lotSf })}
                     min={0}
                     step={100}
                   />
                 </Field>
-                <Field label="Year built">
+                <Field label="Year built" dense>
                   <NumberInput
+                    className="studio-input--dense"
                     value={deal.property.yearBuilt}
                     onChange={(yearBuilt) => patchProperty({ yearBuilt })}
                     min={1800}
                     max={2100}
                   />
                 </Field>
-                <Field label="Units">
+                <Field label="Units" dense>
                   <NumberInput
+                    className="studio-input--dense"
                     value={deal.property.units}
                     onChange={(units) => patchProperty({ units })}
                     min={0}
@@ -392,15 +399,17 @@ export function DealWorkspace({
                 </Field>
                 {deal.propertyClass === "residential" ? (
                   <>
-                    <Field label="Bedrooms">
+                    <Field label="Bedrooms" dense>
                       <NumberInput
+                        className="studio-input--dense"
                         value={deal.property.bedrooms}
                         onChange={(bedrooms) => patchProperty({ bedrooms })}
                         min={0}
                       />
                     </Field>
-                    <Field label="Full baths">
+                    <Field label="Full baths" dense>
                       <NumberInput
+                        className="studio-input--dense"
                         value={deal.property.bathsFull}
                         onChange={(bathsFull) =>
                           patchProperty({ bathsFull })
@@ -412,16 +421,17 @@ export function DealWorkspace({
                   </>
                 ) : (
                   <>
-                    <Field label="Floors">
+                    <Field label="Floors" dense>
                       <NumberInput
+                        className="studio-input--dense"
                         value={deal.property.floors}
                         onChange={(floors) => patchProperty({ floors })}
                         min={0}
                       />
                     </Field>
-                    <Field label="Zoning">
+                    <Field label="Zoning" dense>
                       <input
-                        className={inputClass}
+                        className={inputClassDense}
                         value={deal.property.zoning}
                         onChange={(e) =>
                           patchProperty({ zoning: e.target.value })
@@ -433,10 +443,10 @@ export function DealWorkspace({
               </div>
             </section>
 
-            <div className="flex justify-end border-t border-line pt-5">
+            <div className="flex justify-end border-t border-line pt-3">
               <button
                 type="button"
-                className="btn-signal w-full sm:w-auto"
+                className="btn-signal w-full sm:w-auto !min-h-10 sm:w-auto"
                 onClick={() => goTab("costs")}
               >
                 Next: Itemized costs

@@ -208,6 +208,11 @@
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+.studio-input.studio-input--dense {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.8125rem;
+}
 /*
  * MoneyInput: $ is absolutely positioned at left-3 (~0.75rem).
  * Unlayered studio-input padding beats Tailwind pl-*, so pad here.

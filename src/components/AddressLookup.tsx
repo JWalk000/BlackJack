@@ -6,13 +6,14 @@ import {
   suggestionToPropertyPatch,
   type PropertySuggestion,
 } from "@/lib/property-lookup";
-import { Field, inputClass } from "./ui";
+import { Field, inputClass, inputClassDense } from "./ui";
 
 type Props = {
   property: PropertyInfo;
   onApply: (patch: Partial<PropertyInfo>) => void;
   /** When street text is typed without picking a suggestion */
   onStreetChange: (address: string) => void;
+  dense?: boolean;
 };
 
 function sourceLabel(s: PropertySuggestion["source"]) {
@@ -36,6 +37,7 @@ export function AddressLookup({
   property,
   onApply,
   onStreetChange,
+  dense,
 }: Props) {
   const listId = useId();
   const [query, setQuery] = useState(property.address);
@@ -45,6 +47,7 @@ export function AddressLookup({
   const [hint, setHint] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const fieldClass = dense ? inputClassDense : inputClass;
 
   // Keep input in sync when parent applies a patch from elsewhere
   useEffect(() => {
@@ -107,10 +110,10 @@ export function AddressLookup({
   }
 
   return (
-    <div ref={wrapRef} className="relative space-y-2">
-      <Field label="Street">
+    <div ref={wrapRef} className={`relative ${dense ? "space-y-1" : "space-y-2"}`}>
+      <Field label="Street" dense={dense}>
         <input
-          className={inputClass}
+          className={fieldClass}
           value={query}
           autoComplete="off"
           role="combobox"
