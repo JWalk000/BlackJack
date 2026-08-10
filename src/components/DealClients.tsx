@@ -495,7 +495,7 @@ export function DealEditorClient({ id }: { id: string }) {
   const { user } = useAuth();
   const { isPro, freeMode } = useBilling();
   const [deal, setDeal] = useState<Deal | null>(null);
-  const [tab, setTab] = useState<"property" | "costs" | "analysis">(
+  const [tab, setTab] = useState<"property" | "costs" | "analysis" | "project">(
     "property",
   );
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");

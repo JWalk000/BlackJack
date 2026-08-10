@@ -9,6 +9,7 @@ import { money, pct, underwrite } from "@/lib/underwriting";
 import { CostItemizer } from "./CostItemizer";
 import { AddressLookup } from "./AddressLookup";
 import { MarketCompsPanel } from "./MarketCompsPanel";
+import { DealProjectPanel } from "./DealProjectPanel";
 // import { DealExcelButtons } from "./DealExcelButtons"; // EXCEL_DEAL_IO — re-enable when ready
 import {
   Field,
@@ -18,7 +19,7 @@ import {
   inputClass,
 } from "./ui";
 
-type Tab = "property" | "costs" | "analysis";
+type Tab = "property" | "costs" | "analysis" | "project";
 
 export function DealWorkspace({
   deal,
@@ -113,7 +114,17 @@ export function DealWorkspace({
     { id: "property", label: "Property" },
     { id: "costs", label: "Itemized costs" },
     { id: "analysis", label: "Final numbers" },
+    { id: "project", label: "Project" },
   ];
+
+  const shortTab = (id: Tab) =>
+    id === "property"
+      ? "Property"
+      : id === "costs"
+        ? "Costs"
+        : id === "analysis"
+          ? "Numbers"
+          : "Project";
 
   return (
     <div
@@ -206,11 +217,7 @@ export function DealWorkspace({
             }`}
           >
             <span className="whitespace-normal sm:hidden">
-              {t.id === "property"
-                ? "Property"
-                : t.id === "costs"
-                  ? "Costs"
-                  : "Numbers"}
+              {shortTab(t.id)}
             </span>
             <span className="hidden whitespace-normal sm:inline">{t.label}</span>
           </button>
@@ -884,7 +891,40 @@ export function DealWorkspace({
               >
                 Previous: Itemized costs
               </button>
-              <a href={`/deals/${deal.id}/package`} className="btn-signal w-full sm:w-auto">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <a
+                  href={`/deals/${deal.id}/package`}
+                  className="btn-ghost w-full sm:w-auto"
+                >
+                  Open bank package
+                </a>
+                <button
+                  type="button"
+                  className="btn-signal w-full sm:w-auto"
+                  onClick={() => goTab("project")}
+                >
+                  Next: Project
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {tab === "project" ? (
+          <div className="space-y-8">
+            <DealProjectPanel deal={deal} onChange={onChange} />
+            <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-line pt-6 sm:flex-row sm:flex-wrap sm:items-center">
+              <button
+                type="button"
+                className="btn-forest w-full sm:w-auto"
+                onClick={() => goTab("analysis")}
+              >
+                Previous: Final numbers
+              </button>
+              <a
+                href={`/deals/${deal.id}/package`}
+                className="btn-signal w-full sm:w-auto"
+              >
                 Open bank package
               </a>
             </div>

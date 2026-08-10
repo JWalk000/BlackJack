@@ -64,6 +64,41 @@ export type DealAssumptions = {
   permanentTermYears: number;
 };
 
+/** Simple build phase — schedule without Gantt complexity. */
+export type ProjectPhase = {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  /** 0–100 */
+  progressPct: number;
+};
+
+export type ProjectFileKind = "photo" | "document" | "other";
+
+/** File metadata on the deal; bytes live in IndexedDB and/or Supabase Storage. */
+export type ProjectFile = {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  uploadedAt: string;
+  kind: ProjectFileKind;
+  /** Where bytes are stored for this device/session. */
+  storage: "local" | "cloud" | "both";
+  /** Path inside Supabase bucket `deal-files` when storage includes cloud. */
+  cloudPath?: string | null;
+};
+
+/**
+ * Post-underwrite project execution (keep thin — files, phases, one notes field).
+ */
+export type DealProject = {
+  phases: ProjectPhase[];
+  notes: string;
+  files: ProjectFile[];
+};
+
 export type Deal = {
   id: string;
   createdAt: string;
@@ -75,6 +110,8 @@ export type Deal = {
   assumptions: DealAssumptions;
   financing: Financing;
   costItems: CostItem[];
+  /** Build execution: schedule, files, job notes. */
+  project: DealProject;
   /**
    * When set, deal is shared with the whole team (cloud column user_deals.team_id).
    * Personal free-deal limits still apply to creates owned by free users.

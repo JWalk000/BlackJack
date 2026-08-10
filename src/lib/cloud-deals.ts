@@ -1,4 +1,5 @@
 import type { Deal } from "./types";
+import { normalizeDeal } from "./deals";
 import { tryCreateClient } from "./supabase/client";
 
 export type CloudDealRow = {
@@ -14,11 +15,11 @@ function rowToDeal(row: {
 }): Deal | null {
   const deal = row.data as Deal | null | undefined;
   if (!deal || typeof deal.id !== "string") return null;
-  return {
+  return normalizeDeal({
     ...deal,
     teamId: row.team_id ?? deal.teamId ?? null,
     ownerUserId: row.user_id,
-  };
+  });
 }
 
 /**

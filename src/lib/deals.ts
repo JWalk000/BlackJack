@@ -1,5 +1,6 @@
 import type { BuildMode, CostItem, Deal, PropertyClass } from "./types";
 import { costTemplateFor } from "./types";
+import { emptyProject, normalizeProject } from "./project";
 import { uid } from "./underwriting";
 
 const STORAGE_KEY = "estate.deals.v1";
@@ -92,6 +93,7 @@ export function createDeal(partial?: Partial<Deal>): Deal {
   const now = new Date().toISOString();
   const buildMode = partial?.buildMode ?? "rehab";
   const propertyClass = partial?.propertyClass ?? "residential";
+  const assumptions = { ...emptyAssumptions(), ...partial?.assumptions };
   return {
     id: partial?.id ?? uid("deal"),
     createdAt: partial?.createdAt ?? now,
@@ -100,10 +102,13 @@ export function createDeal(partial?: Partial<Deal>): Deal {
     propertyClass,
     exitStrategy: partial?.exitStrategy ?? "flip",
     property: { ...emptyProperty(), ...partial?.property },
-    assumptions: { ...emptyAssumptions(), ...partial?.assumptions },
+    assumptions,
     financing: { ...emptyFinancing(), ...partial?.financing },
     costItems:
       partial?.costItems ?? templateCostItems(buildMode, propertyClass),
+    project:
+      partial?.project ??
+      emptyProject(buildMode, assumptions.projectMonths),
     teamId: partial?.teamId ?? null,
     ownerUserId: partial?.ownerUserId ?? null,
   };
@@ -124,8 +129,8 @@ export function listDeals(): Deal[] {
   }
 }
 
-/** Migrate older localStorage shapes (e.g. holdingCosts). */
-function normalizeDeal(raw: Deal): Deal {
+/** Migrate older localStorage / cloud shapes (e.g. holdingCosts, missing project). */
+export function normalizeDeal(raw: Deal): Deal {
   const legacy = raw.assumptions as Deal["assumptions"] & {
     holdingCosts?: number;
     closingCostsManual?: boolean;
@@ -138,14 +143,26 @@ function normalizeDeal(raw: Deal): Deal {
     ...legacy,
   };
   void _ignored;
+  const buildMode = raw.buildMode ?? "rehab";
+  const assumptions = {
+    ...emptyAssumptions(),
+    ...rest,
+    closingCostsManual: Boolean(legacy?.closingCostsManual),
+  };
   return {
     ...raw,
-    assumptions: {
-      ...emptyAssumptions(),
-      ...rest,
-      closingCostsManual: Boolean(legacy?.closingCostsManual),
-    },
+    buildMode,
+    propertyClass: raw.propertyClass ?? "residential",
+    exitStrategy: raw.exitStrategy ?? "flip",
+    property: { ...emptyProperty(), ...raw.property },
+    assumptions,
+    financing: { ...emptyFinancing(), ...raw.financing },
     costItems: Array.isArray(raw.costItems) ? raw.costItems : [],
+    project: normalizeProject(
+      raw.project,
+      buildMode,
+      assumptions.projectMonths,
+    ),
     teamId: raw.teamId ?? null,
     ownerUserId: raw.ownerUserId ?? null,
   };
