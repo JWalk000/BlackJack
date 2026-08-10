@@ -93,6 +93,9 @@ export const MoneyInput = forwardRef<
     /** Data attributes for Excel-like cell focus (e.g. CostItemizer). */
     "data-cost-item"?: string;
     "data-cost-field"?: string;
+    /** Flat spreadsheet cell (no bordered shell). */
+    variant?: "default" | "sheet";
+    className?: string;
   }
 >(function MoneyInput(
   {
@@ -104,6 +107,8 @@ export const MoneyInput = forwardRef<
     name,
     "data-cost-item": dataCostItem,
     "data-cost-field": dataCostField,
+    variant = "default",
+    className = "",
   },
   ref,
 ) {
@@ -123,10 +128,20 @@ export const MoneyInput = forwardRef<
     onChange(clampNumber(n, 0));
   }
 
+  const sheet = variant === "sheet";
+
   return (
-    <div className={`${inputClass} flex items-center gap-1.5`}>
+    <div
+      className={
+        sheet
+          ? `flex h-full min-h-9 w-full items-center gap-0.5 px-2 ${className}`
+          : `${inputClass} flex items-center gap-1.5 ${className}`
+      }
+    >
       <span
-        className="shrink-0 select-none text-sm leading-none text-muted"
+        className={`shrink-0 select-none leading-none text-muted ${
+          sheet ? "text-xs" : "text-sm"
+        }`}
         aria-hidden
       >
         $
@@ -141,7 +156,11 @@ export const MoneyInput = forwardRef<
         spellCheck={false}
         data-cost-item={dataCostItem}
         data-cost-field={dataCostField}
-        className={bareNumberFieldClass}
+        className={
+          sheet
+            ? "min-w-0 w-full flex-1 border-0 bg-transparent p-0 text-right font-mono text-sm tabular-nums text-ink outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none placeholder:text-muted/55"
+            : bareNumberFieldClass
+        }
         value={display}
         placeholder={placeholder}
         onKeyDown={onKeyDown}
