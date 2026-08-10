@@ -849,8 +849,6 @@ export function DealWorkspace({
 
             </section>
 
-            <MarketCompsPanel deal={deal} />
-
             <DealDecisionSnapshot
               deal={deal}
               packageHref={`/deals/${deal.id}/package`}
@@ -872,6 +870,8 @@ export function DealWorkspace({
                 Next: Project
               </button>
             </div>
+
+            <MarketCompsPanel deal={deal} />
           </div>
         ) : null}
 
