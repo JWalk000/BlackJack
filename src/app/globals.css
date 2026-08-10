@@ -213,8 +213,13 @@
  * Unlayered studio-input padding beats Tailwind pl-*, so pad here.
  * pl-9 equivalent (2.25rem) keeps digits clear of the $ prefix.
  */
-.studio-input.studio-input--money {
-  padding-left: 2.25rem;
+.studio-input.studio-input--dense {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.8125rem;
+}
+.studio-input.studio-input--dense.studio-input--money {
+  padding-left: 2rem;
 }
 .studio-input:focus,
 .studio-input:focus-within {

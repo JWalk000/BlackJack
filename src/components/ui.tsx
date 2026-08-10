@@ -12,18 +12,31 @@ export function Field({
   label,
   children,
   hint,
+  compact,
 }: {
   label: string;
   children: ReactNode;
   hint?: string;
+  /** Tighter label / gap for dense forms */
+  compact?: boolean;
 }) {
   return (
     <label className="block">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+      <span
+        className={`font-semibold uppercase text-muted ${
+          compact
+            ? "text-[10px] tracking-[0.1em]"
+            : "text-[11px] tracking-[0.16em]"
+        }`}
+      >
         {label}
       </span>
-      <div className="mt-1.5">{children}</div>
-      {hint ? <p className="mt-1 text-xs text-muted">{hint}</p> : null}
+      <div className={compact ? "mt-0.5" : "mt-1.5"}>{children}</div>
+      {hint ? (
+        <p className={`text-xs text-muted ${compact ? "mt-0.5" : "mt-1"}`}>
+          {hint}
+        </p>
+      ) : null}
     </label>
   );
 }
@@ -204,6 +217,7 @@ export function NumberInput({
   max,
   step = 1,
   placeholder = "",
+  className = "",
 }: {
   value: number | null;
   onChange: (n: number | null) => void;
@@ -211,6 +225,7 @@ export function NumberInput({
   max?: number;
   step?: number;
   placeholder?: string;
+  className?: string;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const inputId = useId();
@@ -234,7 +249,7 @@ export function NumberInput({
       autoComplete="off"
       spellCheck={false}
       data-step={step}
-      className={numberInputClass}
+      className={`${numberInputClass} ${className}`.trim()}
       value={display}
       placeholder={placeholder}
       onFocus={(e) => {

@@ -586,20 +586,22 @@ export function DealWorkspace({
               </div>
             </div>
 
-            {/* Single column: assumptions, then stack — compact grid */}
-            <section className="panel space-y-3 p-3 sm:p-4">
+            {/* Dense underwrite: 2–3 rows max on desktop */}
+            <section className="panel space-y-2 p-2.5 sm:p-3">
               <p className="page-label">Underwrite</p>
 
-              <div className="grid gap-x-3 gap-y-2 sm:grid-cols-6">
+              <div className="grid gap-x-2 gap-y-1.5 sm:grid-cols-12">
                 <div className="sm:col-span-3">
                   <Field
+                    compact
                     label={
                       deal.exitStrategy === "flip"
-                        ? "Exit value (ARV)"
-                        : "Stabilized value (ARV)"
+                        ? "Exit (ARV)"
+                        : "Value (ARV)"
                     }
                   >
                     <MoneyInput
+                      className="studio-input--dense"
                       value={deal.assumptions.arv}
                       onChange={(arv) => {
                         const next: Partial<typeof deal.assumptions> = { arv };
@@ -612,8 +614,9 @@ export function DealWorkspace({
                   </Field>
                 </div>
                 <div className="sm:col-span-3">
-                  <Field label="Closing costs" hint="Default 4% of ARV">
+                  <Field compact label="Closing (4% def.)">
                     <MoneyInput
+                      className="studio-input--dense"
                       value={
                         deal.assumptions.closingCostsManual
                           ? deal.assumptions.closingCosts
@@ -628,16 +631,15 @@ export function DealWorkspace({
                     />
                   </Field>
                 </div>
-
                 <div className="sm:col-span-2">
                   <Field
+                    compact
                     label={
-                      deal.buildMode === "new_build"
-                        ? "Build months"
-                        : "Rehab months"
+                      deal.buildMode === "new_build" ? "Build mo" : "Rehab mo"
                     }
                   >
                     <NumberInput
+                      className="studio-input--dense"
                       value={deal.assumptions.projectMonths}
                       onChange={(v) =>
                         patchAssumptions({ projectMonths: v ?? 0 })
@@ -649,8 +651,9 @@ export function DealWorkspace({
                 {deal.exitStrategy === "flip" ? (
                   <>
                     <div className="sm:col-span-2">
-                      <Field label="Months to sell">
+                      <Field compact label="Sell mo">
                         <NumberInput
+                          className="studio-input--dense"
                           value={deal.assumptions.monthsToSaleOrRent}
                           onChange={(v) =>
                             patchAssumptions({ monthsToSaleOrRent: v ?? 0 })
@@ -660,8 +663,9 @@ export function DealWorkspace({
                       </Field>
                     </div>
                     <div className="sm:col-span-2">
-                      <Field label="Cost of sale %">
+                      <Field compact label="Sale %">
                         <NumberInput
+                          className="studio-input--dense"
                           value={deal.assumptions.costOfSalePct}
                           onChange={(v) =>
                             patchAssumptions({ costOfSalePct: v ?? 0 })
@@ -676,8 +680,9 @@ export function DealWorkspace({
                 ) : (
                   <>
                     <div className="sm:col-span-2">
-                      <Field label="Gross rent / mo">
+                      <Field compact label="Rent / mo">
                         <MoneyInput
+                          className="studio-input--dense"
                           value={deal.assumptions.grossRentMonthly}
                           onChange={(grossRentMonthly) =>
                             patchAssumptions({ grossRentMonthly })
@@ -686,8 +691,9 @@ export function DealWorkspace({
                       </Field>
                     </div>
                     <div className="sm:col-span-2">
-                      <Field label="OpEx / mo">
+                      <Field compact label="OpEx / mo">
                         <MoneyInput
+                          className="studio-input--dense"
                           value={deal.assumptions.operatingExpensesMonthly}
                           onChange={(operatingExpensesMonthly) =>
                             patchAssumptions({ operatingExpensesMonthly })
@@ -701,13 +707,13 @@ export function DealWorkspace({
                 <div
                   className={
                     deal.financing.style !== "all_cash"
-                      ? "sm:col-span-3"
-                      : "sm:col-span-6"
+                      ? "sm:col-span-5"
+                      : "sm:col-span-12"
                   }
                 >
-                  <Field label="Financing">
+                  <Field compact label="Financing">
                     <select
-                      className={inputClass}
+                      className={`${inputClass} studio-input--dense`}
                       value={deal.financing.style}
                       onChange={(e) =>
                         patchFinancing({
@@ -725,9 +731,10 @@ export function DealWorkspace({
                 </div>
                 {deal.financing.style !== "all_cash" ? (
                   <>
-                    <div className="sm:col-span-1">
-                      <Field label="LTV %">
+                    <div className="sm:col-span-2">
+                      <Field compact label="LTV %">
                         <NumberInput
+                          className="studio-input--dense"
                           value={deal.financing.ltvPct}
                           onChange={(v) =>
                             patchFinancing({ ltvPct: v ?? 0 })
@@ -737,9 +744,10 @@ export function DealWorkspace({
                         />
                       </Field>
                     </div>
-                    <div className="sm:col-span-1">
-                      <Field label="Rate %">
+                    <div className="sm:col-span-2">
+                      <Field compact label="Rate %">
                         <NumberInput
+                          className="studio-input--dense"
                           value={deal.financing.interestRatePct}
                           onChange={(v) =>
                             patchFinancing({ interestRatePct: v ?? 0 })
@@ -749,9 +757,10 @@ export function DealWorkspace({
                         />
                       </Field>
                     </div>
-                    <div className="sm:col-span-1">
-                      <Field label="Points %">
+                    <div className="sm:col-span-2">
+                      <Field compact label="Pts %">
                         <NumberInput
+                          className="studio-input--dense"
                           value={deal.financing.pointsPct}
                           onChange={(v) =>
                             patchFinancing({ pointsPct: v ?? 0 })
@@ -767,8 +776,9 @@ export function DealWorkspace({
                 {deal.exitStrategy === "hold" ? (
                   <>
                     <div className="sm:col-span-2">
-                      <Field label="Vacancy %">
+                      <Field compact label="Vacancy %">
                         <NumberInput
+                          className="studio-input--dense"
                           value={deal.assumptions.vacancyPct}
                           onChange={(v) =>
                             patchAssumptions({ vacancyPct: v ?? 0 })
@@ -778,9 +788,10 @@ export function DealWorkspace({
                         />
                       </Field>
                     </div>
-                    <div className="sm:col-span-2">
-                      <Field label="Other income / mo">
+                    <div className="sm:col-span-3">
+                      <Field compact label="Other income">
                         <MoneyInput
+                          className="studio-input--dense"
                           value={deal.assumptions.otherIncomeMonthly}
                           onChange={(otherIncomeMonthly) =>
                             patchAssumptions({ otherIncomeMonthly })
@@ -788,10 +799,10 @@ export function DealWorkspace({
                         />
                       </Field>
                     </div>
-                    <div className="sm:col-span-2">
-                      <Field label="Refinance after rehab?">
+                    <div className="sm:col-span-3">
+                      <Field compact label="Refinance?">
                         <select
-                          className={inputClass}
+                          className={`${inputClass} studio-input--dense`}
                           value={deal.assumptions.refinance ? "yes" : "no"}
                           onChange={(e) =>
                             patchAssumptions({
@@ -807,8 +818,9 @@ export function DealWorkspace({
                     {deal.assumptions.refinance ? (
                       <>
                         <div className="sm:col-span-2">
-                          <Field label="Perm LTV %">
+                          <Field compact label="Perm LTV">
                             <NumberInput
+                              className="studio-input--dense"
                               value={deal.assumptions.permanentLtvPct}
                               onChange={(v) =>
                                 patchAssumptions({ permanentLtvPct: v ?? 0 })
@@ -819,8 +831,9 @@ export function DealWorkspace({
                           </Field>
                         </div>
                         <div className="sm:col-span-2">
-                          <Field label="Rate %">
+                          <Field compact label="Perm rate">
                             <NumberInput
+                              className="studio-input--dense"
                               value={deal.assumptions.permanentRatePct}
                               onChange={(v) =>
                                 patchAssumptions({ permanentRatePct: v ?? 0 })
@@ -831,8 +844,9 @@ export function DealWorkspace({
                           </Field>
                         </div>
                         <div className="sm:col-span-2">
-                          <Field label="Term yrs">
+                          <Field compact label="Term yrs">
                             <NumberInput
+                              className="studio-input--dense"
                               value={deal.assumptions.permanentTermYears}
                               onChange={(v) =>
                                 patchAssumptions({
@@ -849,7 +863,7 @@ export function DealWorkspace({
                 ) : null}
               </div>
 
-              <div className="border-t border-line pt-3">
+              <div className="border-t border-line pt-2">
                 <AnalysisStackPanel
                   deal={deal}
                   result={result}
@@ -952,85 +966,74 @@ function AnalysisStackPanel({
 
   const body = (
     <>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <p className="page-label">Stack</p>
-          <h3 className="mt-0.5 font-display text-xl tracking-tight text-ink">
+          <h3 className="font-display text-base tracking-tight text-ink sm:text-lg">
             {deal.exitStrategy === "flip" ? "Build → exit" : "Build → hold"}
           </h3>
-        </div>
-        <button
-          type="button"
-          onClick={onGoToCosts}
-          className="text-xs font-semibold text-signal transition hover:text-ink"
-        >
-          Edit costs →
-        </button>
-      </div>
-
-      <div>
-        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
           <p className="text-sm text-ink">
             <span className="text-muted">Build </span>
-            <span className="font-display text-lg tracking-tight">
-              {money(b.spent)}
-            </span>
+            <span className="font-display tracking-tight">{money(b.spent)}</span>
             {b.budgetSet ? (
               <>
-                <span className="text-muted"> of </span>
-                <span className="font-display text-lg tracking-tight">
+                <span className="text-muted"> / </span>
+                <span className="font-display tracking-tight">
                   {money(b.costBudget)}
                 </span>
+                {b.usedPct != null ? (
+                  <span className="text-muted"> · {b.usedPct}%</span>
+                ) : null}
               </>
             ) : (
-              <span className="text-muted"> spent · no cap set</span>
+              <span className="text-muted"> spent</span>
             )}
           </p>
+        </div>
+        <div className="flex items-center gap-3">
           {b.budgetSet && b.remaining != null ? (
             <p
-              className={`text-sm ${
+              className={`text-xs ${
                 b.status === "over" ? "font-medium text-loss" : "text-muted"
               }`}
             >
               {b.status === "over"
                 ? `Over ${money(b.overBy)}`
                 : `${money(b.remaining)} left`}
-              {b.contingencyPct > 0
-                ? ` · ${b.contingencyPct}% contingency`
-                : ""}
             </p>
           ) : null}
+          <button
+            type="button"
+            onClick={onGoToCosts}
+            className="text-xs font-semibold text-signal transition hover:text-ink"
+          >
+            Edit costs →
+          </button>
         </div>
-        {b.budgetSet ? (
-          <div className="mt-2">
-            <div className="h-1.5 overflow-hidden bg-stone">
-              <div
-                className={`h-full ${
-                  b.status === "over"
-                    ? "bg-loss"
-                    : b.status === "into_contingency"
-                      ? "bg-signal"
-                      : "bg-profit"
-                }`}
-                style={{ width: `${b.barPct}%` }}
-              />
-            </div>
-            {b.usedPct != null ? (
-              <p className="mt-1 text-xs text-muted">
-                {b.usedPct}% of deal budget used
-              </p>
-            ) : null}
-          </div>
-        ) : null}
       </div>
+
+      {b.budgetSet ? (
+        <div className="h-1 overflow-hidden bg-stone">
+          <div
+            className={`h-full ${
+              b.status === "over"
+                ? "bg-loss"
+                : b.status === "into_contingency"
+                  ? "bg-signal"
+                  : "bg-profit"
+            }`}
+            style={{ width: `${b.barPct}%` }}
+          />
+        </div>
+      ) : null}
 
       <dl className="grid gap-px border border-line bg-line sm:grid-cols-3">
         {stackRows.map(([label, value]) => (
-          <div key={label} className="bg-paper px-3 py-2.5">
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+          <div key={label} className="bg-paper px-2.5 py-1.5">
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
               {label}
             </dt>
-            <dd className="mt-0.5 font-display text-lg tracking-tight text-ink sm:text-xl">
+            <dd className="font-display text-base tracking-tight text-ink sm:text-lg">
               {value}
             </dd>
           </div>
@@ -1040,8 +1043,8 @@ function AnalysisStackPanel({
   );
 
   if (embedded) {
-    return <div className="space-y-3">{body}</div>;
+    return <div className="space-y-2">{body}</div>;
   }
 
-  return <section className="panel space-y-3 p-3 sm:p-4">{body}</section>;
+  return <section className="panel space-y-2 p-2.5 sm:p-3">{body}</section>;
 }
