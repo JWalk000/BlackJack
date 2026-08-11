@@ -50,144 +50,107 @@ export function NewDealClient() {
     useBilling();
   // Always honor build-time free launch lock (don't trust only context).
   const openCreate = freeMode || isBillingFreeMode();
-  const [buildMode, setBuildMode] = useState<Deal["buildMode"]>("rehab");
-  const [propertyClass, setPropertyClass] =
-    useState<Deal["propertyClass"]>("residential");
   const [toast, setToast] = useState<BillingToastState>({
     open: false,
     message: "",
   });
+  const [blocked, setBlocked] = useState(false);
+  const started = useRef(false);
 
-  async function start() {
-    // Signed-out ok: localStorage only. Never block create while product is free.
-    if (openCreate) {
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+
+    async function start() {
+      // Defaults match Property tab (rehab + residential); change there.
+      const defaults = {
+        buildMode: "rehab" as const,
+        propertyClass: "residential" as const,
+      };
+
+      if (openCreate) {
+        const deal = createDeal({
+          ...defaults,
+          costItems: templateCostItems(
+            defaults.buildMode,
+            defaults.propertyClass,
+          ),
+        });
+        const saved = saveDeal(deal);
+        if (user) void upsertCloudDeal(saved);
+        router.replace(`/deals/${deal.id}`);
+        return;
+      }
+
+      const gate = checkCanCreateDeal(isPro, {
+        cloudFreeDealsCreated: freeDealsCreated,
+      });
+      if (!gate.ok) {
+        setBlocked(true);
+        setToast({ open: true, message: gate.message });
+        return;
+      }
       const deal = createDeal({
-        buildMode,
-        propertyClass,
-        costItems: templateCostItems(buildMode, propertyClass),
+        ...defaults,
+        costItems: templateCostItems(
+          defaults.buildMode,
+          defaults.propertyClass,
+        ),
       });
       const saved = saveDeal(deal);
-      if (user) void upsertCloudDeal(saved);
-      router.push(`/deals/${deal.id}`);
-      return;
+      if (!isPro) {
+        await recordFreeDealCreated();
+      }
+      if (user && isPro) {
+        void upsertCloudDeal(saved);
+      }
+      router.replace(`/deals/${deal.id}`);
     }
 
-    const gate = checkCanCreateDeal(isPro, {
-      cloudFreeDealsCreated: freeDealsCreated,
-    });
-    if (!gate.ok) {
-      setToast({ open: true, message: gate.message });
-      return;
-    }
-    const deal = createDeal({
-      buildMode,
-      propertyClass,
-      costItems: templateCostItems(buildMode, propertyClass),
-    });
-    const saved = saveDeal(deal);
-    if (!isPro) {
-      await recordFreeDealCreated();
-    }
-    if (user && isPro) {
-      void upsertCloudDeal(saved);
-    }
-    router.push(`/deals/${deal.id}`);
+    void start();
+  }, [
+    freeDealsCreated,
+    isPro,
+    openCreate,
+    recordFreeDealCreated,
+    router,
+    user,
+  ]);
+
+  if (blocked) {
+    return (
+      <div className="mx-auto max-w-xl px-5 py-14 sm:px-8 sm:py-20">
+        <p className="page-label">New deal</p>
+        <h1 className="page-title mt-3 text-3xl sm:text-4xl">
+          Deal limit reached
+        </h1>
+        <p className="mt-3 text-base text-muted">
+          Free plan includes {FREE_DEAL_LIMIT} deal in this browser.{" "}
+          <Link href="/pricing" className="font-medium text-signal">
+            Upgrade to Pro
+          </Link>{" "}
+          for unlimited + cloud.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link href="/deals" className="btn-forest">
+            My deals
+          </Link>
+          <Link href="/pricing" className="btn-signal">
+            View pricing
+          </Link>
+        </div>
+        <BillingToast
+          state={toast}
+          onClose={() => setToast((t) => ({ ...t, open: false }))}
+        />
+      </div>
+    );
   }
 
   return (
-    <div className="relative mx-auto max-w-xl px-5 py-14 sm:px-8 sm:py-20">
-      <div
-        className="pointer-events-none absolute -right-4 top-8 font-display text-[8rem] leading-none text-ink/[0.04] sm:text-[11rem]"
-        aria-hidden
-      >
-        $
-      </div>
-
+    <div className="mx-auto max-w-xl px-5 py-14 sm:px-8 sm:py-20">
       <p className="page-label">New deal</p>
-      <h1 className="page-title mt-3 text-4xl sm:text-5xl">
-        How are you building?
-      </h1>
-      <p className="mt-3 max-w-md text-base leading-relaxed text-muted">
-        Ground-up or rehab, residential or commercial. You can change this
-        later inside the deal.
-        {!openCreate && !isPro ? (
-          <>
-            {" "}
-            Free plan includes {FREE_DEAL_LIMIT} deal in this browser.{" "}
-            <Link href="/pricing" className="font-medium text-signal">
-              Upgrade to Pro
-            </Link>{" "}
-            for unlimited + cloud.
-          </>
-        ) : null}
-      </p>
-
-      <div className="relative mt-12 space-y-9">
-        <div>
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-            Build path
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(
-              [
-                ["rehab", "Rehab", "Improve an existing building"],
-                ["new_build", "Ground-up", "Build from the dirt"],
-              ] as const
-            ).map(([id, title, sub]) => (
-              <button
-                key={id}
-                type="button"
-                data-active={buildMode === id}
-                onClick={() => setBuildMode(id)}
-                className="select-tile px-4 py-5"
-              >
-                <span className="block font-display text-xl tracking-tight">
-                  {title}
-                </span>
-                <span
-                  className={`mt-1.5 block text-sm leading-snug ${
-                    buildMode === id ? "text-paper/75" : "text-muted"
-                  }`}
-                >
-                  {sub}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-            Asset class
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(
-              [
-                ["residential", "Residential"],
-                ["commercial", "Commercial"],
-              ] as const
-            ).map(([id, title]) => (
-              <button
-                key={id}
-                type="button"
-                data-active={propertyClass === id}
-                onClick={() => setPropertyClass(id)}
-                className="select-tile px-4 py-4 font-display text-xl tracking-tight"
-              >
-                {title}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <button type="button" onClick={() => void start()} className="btn-signal w-full py-3.5">
-          Create deal
-        </button>
-      </div>
-      <BillingToast
-        state={toast}
-        onClose={() => setToast((t) => ({ ...t, open: false }))}
-      />
+      <p className="mt-3 text-base text-muted">Opening deal workspace…</p>
     </div>
   );
 }
