@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Source_Sans_3 } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { AppShell } from "@/components/AppShell";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthProvider } from "@/lib/auth-context";
@@ -45,6 +46,7 @@ export default function RootLayout({
             <AppShell>{children}</AppShell>
           </BillingProvider>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );
