@@ -99,15 +99,15 @@ function PricingSticker({
   );
 }
 
-/** Try for free on top; Pro + Team share the row underneath. */
+/** Try for free centered over Pro + Team (pyramid). */
 function StickerStack() {
   return (
     <div
-      className="sticker-pair flex w-full flex-col items-center gap-1.5 sm:gap-3 lg:w-auto lg:items-end"
+      className="sticker-pair flex w-full flex-col items-center gap-1.5 sm:gap-3 lg:w-auto"
       aria-label="Try for free, Pro, and Team"
     >
       <PricingSticker variant="free" />
-      <div className="flex w-full max-w-[24rem] flex-row items-start justify-center gap-2 sm:w-auto sm:max-w-none sm:gap-3 lg:justify-end">
+      <div className="flex w-full max-w-[24rem] flex-row items-start justify-center gap-2 sm:w-auto sm:max-w-none sm:gap-3">
         <PricingSticker variant="pro" />
         <PricingSticker variant="team" />
       </div>
