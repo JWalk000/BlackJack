@@ -25,45 +25,73 @@ const MARQUEE = [
 function PricingSticker({
   variant,
 }: {
-  variant: "pro" | "team";
+  variant: "free" | "pro" | "team";
 }) {
-  const isPro = variant === "pro";
-  const price = isPro ? PRO_PRICE_USD_MONTHLY : TEAM_PRICE_USD_MONTHLY;
-  const label = isPro ? "Pro" : "Team";
-  const cta = isPro ? "Get Pro →" : "Team details →";
-  const line = isPro
-    ? "Unlimited deals · cloud sync · bank packages"
-    : "5 seats · shared deals · owner invites";
-  const href = isPro ? "/pricing" : "/team";
+  const isFree = variant === "free";
+  const copy = {
+    free: {
+      label: "Free",
+      price: "Try",
+      suffix: "for free",
+      line: "No card · start a deal now",
+      cta: "Try for free →",
+      href: "/deals/new",
+      stickerClass: "sticker-free",
+      ctaClass:
+        "bg-ink text-paper hover:bg-forest hover:shadow-ink/10",
+    },
+    pro: {
+      label: "Pro",
+      price: `$${PRO_PRICE_USD_MONTHLY}`,
+      suffix: "/mo",
+      line: "Unlimited deals · cloud sync · bank packages",
+      cta: "Get Pro →",
+      href: "/pricing",
+      stickerClass: "",
+      ctaClass:
+        "bg-signal text-paper hover:bg-brass hover:text-ink hover:shadow-ink/10",
+    },
+    team: {
+      label: "Team",
+      price: `$${TEAM_PRICE_USD_MONTHLY}`,
+      suffix: "/mo",
+      line: "5 seats · shared deals · owner invites",
+      cta: "Team details →",
+      href: "/team",
+      stickerClass: "sticker-team",
+      ctaClass:
+        "bg-forest text-paper hover:bg-canopy hover:shadow-ink/10",
+    },
+  }[variant];
 
   return (
-    <div className="relative w-[min(100%,10rem)] shrink-0 pb-2 pt-1 min-[380px]:w-[min(100%,11.25rem)] sm:w-[12.25rem]">
+    <div
+      className={`relative shrink-0 pb-2 pt-3 ${
+        isFree
+          ? "w-full max-w-[17rem] sm:w-[13.5rem] sm:max-w-none"
+          : "w-[calc(50%-0.25rem)] min-w-0 max-w-[11.5rem] sm:w-[12.25rem] sm:max-w-none"
+      }`}
+    >
       <div
-        className={`sticker-pro relative z-10 px-3 pb-2.5 pt-3.5 min-[380px]:px-3.5 min-[380px]:pb-3 min-[380px]:pt-4 sm:px-3.5 sm:pb-3.5 sm:pt-5 ${
-          isPro ? "" : "sticker-team"
-        }`}
+        className={`sticker-pro relative z-10 px-2.5 pb-2.5 pt-3 min-[400px]:px-3 min-[400px]:pt-3.5 sm:px-3.5 sm:pb-3.5 sm:pt-5 ${copy.stickerClass}`}
       >
         <span className="sticker-tape" aria-hidden />
         <div className="relative z-[1]">
-          <span className="sticker-badge">{label}</span>
-          <p className="mt-1.5 font-display text-[1.95rem] leading-[0.85] tracking-tight text-ink min-[380px]:text-[2.2rem] sm:text-[2.45rem]">
-            ${price}
-            <span className="ml-0.5 align-baseline font-body text-xs font-semibold tracking-normal text-muted sm:text-sm">
-              /mo
+          <span className="sticker-badge">{copy.label}</span>
+          <p className="mt-1.5 font-display text-[1.7rem] leading-[0.85] tracking-tight text-ink min-[400px]:text-[1.95rem] sm:text-[2.45rem]">
+            {copy.price}
+            <span className="ml-0.5 align-baseline font-body text-[11px] font-semibold tracking-normal text-muted sm:text-sm">
+              {copy.suffix}
             </span>
           </p>
-          <p className="mt-1.5 border-t border-ink/10 pt-1.5 text-[10px] leading-snug text-ink/75 min-[380px]:text-[11px]">
-            {line}
+          <p className="mt-1.5 border-t border-ink/10 pt-1.5 text-[10px] leading-snug text-ink/75 sm:text-[11px]">
+            {copy.line}
           </p>
           <Link
-            href={href}
-            className={`mt-2.5 inline-flex min-h-10 w-full items-center justify-center px-3 py-2 text-xs font-semibold shadow-[0_2px_0_0] shadow-ink/15 transition sm:text-sm ${
-              isPro
-                ? "bg-signal text-paper hover:bg-brass hover:text-ink hover:shadow-ink/10"
-                : "bg-forest text-paper hover:bg-canopy hover:shadow-ink/10"
-            }`}
+            href={copy.href}
+            className={`mt-2 inline-flex min-h-11 w-full items-center justify-center px-2 py-2 text-xs font-semibold shadow-[0_2px_0_0] shadow-ink/15 transition sm:mt-2.5 sm:px-3 sm:text-sm ${copy.ctaClass}`}
           >
-            {cta}
+            {copy.cta}
           </Link>
         </div>
       </div>
@@ -71,15 +99,18 @@ function PricingSticker({
   );
 }
 
-/** Pro + Team side by side — same sticky-note cluster. */
+/** Try for free on top; Pro + Team share the row underneath. */
 function StickerStack() {
   return (
     <div
-      className="sticker-pair flex flex-row flex-wrap items-start justify-center gap-2 sm:gap-3 lg:justify-end"
-      aria-label="Pro and Team pricing"
+      className="sticker-pair flex w-full flex-col items-center gap-1.5 sm:gap-3 lg:w-auto lg:items-end"
+      aria-label="Try for free, Pro, and Team"
     >
-      <PricingSticker variant="pro" />
-      <PricingSticker variant="team" />
+      <PricingSticker variant="free" />
+      <div className="flex w-full max-w-[24rem] flex-row items-start justify-center gap-2 sm:w-auto sm:max-w-none sm:gap-3 lg:justify-end">
+        <PricingSticker variant="pro" />
+        <PricingSticker variant="team" />
+      </div>
     </div>
   );
 }
@@ -88,7 +119,7 @@ export default function HomePage() {
   return (
     <>
       {/* Full-bleed hero · one composition + pricing stickers */}
-      <section className="relative min-h-[100svh] overflow-hidden bg-ink text-paper">
+      <section className="relative min-h-[100svh] overflow-x-hidden bg-ink text-paper">
         <div className="absolute inset-0 overflow-hidden">
           <div
             className="animate-ken absolute inset-0 bg-cover bg-center"
@@ -99,8 +130,8 @@ export default function HomePage() {
           <div className="texture-grain absolute inset-0 opacity-40" />
         </div>
 
-        <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-5 pb-28 pt-20 sm:px-8 sm:pb-36 sm:pt-24 lg:justify-center lg:pb-32 lg:pt-16">
-          <div className="grid items-end gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)] lg:items-center lg:gap-8 xl:gap-10">
+        <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-start px-5 pb-24 pt-24 sm:px-8 sm:pb-28 sm:pt-24 lg:justify-center lg:pb-32 lg:pt-16">
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)] lg:items-center lg:gap-8 xl:gap-10">
             <div className="min-w-0 lg:-translate-y-6">
               <p className="animate-rise text-[11px] font-medium uppercase tracking-[0.32em] text-signal">
                 Build for the Future
@@ -129,13 +160,13 @@ export default function HomePage() {
                 </p>
               </div>
 
-              {/* Mobile / tablet: Pro + Team under CTAs */}
-              <div className="animate-rise-3 mt-8 lg:hidden">
+              {/* Mobile / tablet: stickers under CTAs, in the first screen */}
+              <div className="animate-rise-3 mt-5 sm:mt-8 lg:hidden">
                 <StickerStack />
               </div>
             </div>
 
-            {/* Desktop: Pro + Team tags side by side on the right */}
+            {/* Desktop: Try for free + Pro / Team on the right */}
             <div className="animate-rise-2 hidden justify-self-end lg:block">
               <StickerStack />
             </div>

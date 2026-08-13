@@ -334,8 +334,8 @@
   color: var(--paper);
 }
 .sticker-pair {
-  /* Keep both tags on one row when width allows */
   min-width: 0;
+  max-width: 100%;
 }
 .sticker-pro::before {
   content: "";
@@ -394,22 +394,17 @@
   );
   opacity: 0.6;
 }
-.sticker-free {
-  position: relative;
+/* Free / try-for-free sticker — same paper as Pro, forest edge + brass tape */
+.sticker-pro.sticker-free {
+  transform: rotate(-2.75deg);
+  border-color: var(--forest);
   background:
-    linear-gradient(150deg, #fffef9 0%, var(--sand) 100%);
-  border: 2.5px solid var(--forest);
-  box-shadow:
-    0 12px 28px rgba(12, 15, 14, 0.18),
-    0 2px 6px rgba(12, 15, 14, 0.1);
-  transform: rotate(-2.5deg);
+    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(255, 255, 255, 0.6), transparent 50%),
+    linear-gradient(150deg, #fffef9 0%, var(--sand) 55%, #e8efe6 100%);
 }
-.sticker-free::before {
-  content: "";
-  position: absolute;
-  inset: 5px;
-  border: 1px dashed color-mix(in srgb, var(--forest) 35%, transparent);
-  pointer-events: none;
+.sticker-pro.sticker-free .sticker-badge {
+  background: var(--brass);
+  color: var(--ink);
 }
 .sticker-badge {
   display: inline-block;
@@ -431,7 +426,7 @@
   .sticker-pro.sticker-team {
     transform: rotate(-0.6deg);
   }
-  .sticker-free {
+  .sticker-pro.sticker-free {
     transform: rotate(-0.8deg);
   }
   .sticker-pair {
@@ -444,13 +439,6 @@
       0 12px 28px rgba(12, 15, 14, 0.18),
       0 2px 6px rgba(12, 15, 14, 0.1),
       inset 0 0 0 1px rgba(255, 255, 255, 0.4);
-  }
-}
-
-@media (max-width: 379px) {
-  .sticker-pair {
-    flex-direction: column;
-    align-items: center;
   }
 }
 
