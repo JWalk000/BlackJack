@@ -3,6 +3,7 @@ import {
   PRO_PRICE_USD_MONTHLY,
   TEAM_PRICE_USD_MONTHLY,
 } from "@/lib/billing/plans";
+import { BrandMark } from "@/components/BrandMark";
 import { BRAND_NAME } from "@/lib/brand";
 
 const HERO_IMG =
@@ -21,6 +22,12 @@ const MARQUEE = [
   "Hold & rent",
   "Line by line",
 ];
+
+const SPECS = ["Ground-up", "Rehab", "Residential", "Commercial"];
+
+const PIPELINE = ["Property", "Itemized costs", "Final numbers", "Bank package"];
+
+const [brandLead, brandArc] = BRAND_NAME.split(" ");
 
 function PricingSticker({
   variant,
@@ -125,39 +132,120 @@ export default function HomePage() {
             className="animate-ken absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url('${HERO_IMG}')` }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/70 to-ink/35" />
-          <div className="absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/50 to-transparent" />
-          <div className="texture-grain absolute inset-0 opacity-40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/55 to-ink/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-ink/80 via-ink/40 to-transparent" />
+          <div className="hero-grid absolute inset-0" />
+          <div className="texture-grain absolute inset-0 opacity-35" />
         </div>
+
+        {/* Drafting registration marks */}
+        <div
+          className="pointer-events-none absolute inset-x-4 top-20 bottom-16 sm:inset-x-6 sm:top-[4.75rem] sm:bottom-[3.75rem]"
+          aria-hidden
+        >
+          <span className="absolute left-0 top-0 h-7 w-7 border-l border-t border-paper/35 sm:h-9 sm:w-9" />
+          <span className="absolute right-0 top-0 h-7 w-7 border-r border-t border-paper/35 sm:h-9 sm:w-9" />
+          <span className="absolute bottom-0 left-0 h-7 w-7 border-b border-l border-paper/35 sm:h-9 sm:w-9" />
+          <span className="absolute bottom-0 right-0 h-7 w-7 border-b border-r border-paper/35 sm:h-9 sm:w-9" />
+        </div>
+
+        <p
+          className="pointer-events-none absolute left-4 top-1/2 hidden origin-center -translate-y-1/2 -rotate-90 text-[10px] font-medium uppercase tracking-[0.42em] text-sand/40 xl:block"
+          aria-hidden
+        >
+          Sheet 01 · Site
+        </p>
 
         <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-start px-5 pb-24 pt-24 sm:px-8 sm:pb-28 sm:pt-24 lg:justify-center lg:pb-32 lg:pt-16">
           <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)] lg:items-center lg:gap-8 xl:gap-10">
             <div className="min-w-0 lg:-translate-y-6">
-              <p className="animate-rise text-[11px] font-medium uppercase tracking-[0.32em] text-signal">
-                Build for the Future
-              </p>
+              <div className="animate-rise flex items-center gap-3">
+                <BrandMark className="h-8 w-8 shrink-0 text-paper sm:h-9 sm:w-9" />
+                <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-signal">
+                  Build for the Future
+                </p>
+                <span className="hidden h-px w-10 bg-signal/80 sm:block" aria-hidden />
+              </div>
 
-              <h1 className="animate-rise-1 mt-2 font-display text-[clamp(2.75rem,12vw,7.5rem)] leading-[0.9] tracking-tight text-paper sm:text-[clamp(3.25rem,14vw,8.5rem)]">
-                {BRAND_NAME}
+              <h1 className="animate-rise-1 mt-3 font-display text-[clamp(2.75rem,12vw,7.5rem)] leading-[0.86] tracking-tight text-paper sm:mt-4 sm:text-[clamp(3.25rem,14vw,8.5rem)]">
+                <span className="block">{brandLead}</span>
+                <span className="relative inline-block italic text-sand">
+                  {brandArc}
+                  <svg
+                    className="pointer-events-none absolute -bottom-[0.08em] left-[-3%] h-[0.36em] w-[108%] text-signal"
+                    viewBox="0 0 100 18"
+                    fill="none"
+                    aria-hidden
+                  >
+                    <path
+                      d="M3 5 C 28 18, 72 18, 97 5"
+                      stroke="currentColor"
+                      strokeWidth="3.4"
+                      strokeLinecap="round"
+                      pathLength="1"
+                      className="animate-arc-stroke"
+                    />
+                  </svg>
+                </span>
               </h1>
 
-              <div className="animate-draw mt-3.5 h-1 w-28 origin-left bg-signal sm:w-36" />
+              <div
+                className="animate-draw mt-5 flex max-w-[13rem] items-center gap-2 text-signal sm:mt-6 sm:max-w-[16rem]"
+                aria-hidden
+              >
+                <span className="h-3 w-px bg-current" />
+                <span className="h-px flex-1 bg-current" />
+                <span className="text-[9px] font-medium uppercase tracking-[0.22em] text-sand/55">
+                  Returns
+                </span>
+                <span className="h-px flex-1 bg-current" />
+                <span className="h-3 w-px bg-current" />
+              </div>
 
               <p className="animate-rise-2 mt-4 max-w-md text-base leading-relaxed text-sand sm:mt-5 sm:text-xl">
                 Ground-up or rehab. Residential or commercial. Every cost broken
                 down — then the returns pop.
               </p>
 
-              <div className="animate-rise-3 mt-6 flex w-full max-w-md flex-col items-stretch gap-2.5 sm:mt-7 sm:max-w-none sm:items-start">
+              <div className="animate-rise-2 mt-4 flex flex-wrap gap-2">
+                {SPECS.map((tag) => (
+                  <span
+                    key={tag}
+                    className="border border-paper/20 bg-paper/[0.06] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-sand/90 backdrop-blur-[2px] sm:text-[11px]"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              <div className="animate-rise-3 mt-6 flex w-full max-w-md flex-col items-stretch gap-3 sm:mt-7 sm:max-w-none sm:items-start">
                 <Link
                   href="/deals/new"
-                  className="inline-flex min-h-16 w-full items-center justify-center bg-signal px-10 py-5 text-lg font-semibold tracking-wide text-paper transition hover:bg-brass hover:text-ink sm:w-auto sm:min-h-[4.25rem] sm:px-12 sm:py-6 sm:text-xl"
+                  className="group inline-flex min-h-16 w-full items-center justify-center bg-signal px-10 py-5 text-lg font-semibold tracking-wide text-paper shadow-[5px_5px_0_0] shadow-brass/80 transition hover:bg-brass hover:text-ink hover:shadow-ink/25 sm:w-auto sm:min-h-[4.25rem] sm:px-12 sm:py-6 sm:text-xl"
                 >
                   Develop the numbers
+                  <span
+                    className="ml-3 inline-block transition-transform duration-200 group-hover:translate-x-1"
+                    aria-hidden
+                  >
+                    →
+                  </span>
                 </Link>
-                <p className="max-w-sm text-[12px] leading-snug tracking-wide text-sand/70 sm:text-[13px]">
-                  Property · itemized costs · final numbers · bank package
-                </p>
+                <ol className="flex max-w-lg flex-wrap items-center gap-x-2.5 gap-y-1 text-[12px] leading-snug tracking-wide text-sand/70 sm:text-[13px]">
+                  {PIPELINE.map((step, i) => (
+                    <li key={step} className="flex items-center gap-2.5">
+                      {i > 0 ? (
+                        <span className="text-signal/70" aria-hidden>
+                          —
+                        </span>
+                      ) : null}
+                      <span className="font-medium text-signal/90">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      {step}
+                    </li>
+                  ))}
+                </ol>
               </div>
 
               {/* Mobile / tablet: stickers under CTAs, in the first screen */}
@@ -173,8 +261,22 @@ export default function HomePage() {
           </div>
         </div>
 
+        <div className="pointer-events-none absolute bottom-[3.85rem] left-6 z-[1] hidden border border-paper/20 bg-ink/55 px-3 py-2 backdrop-blur-sm xl:block" aria-hidden>
+          <div className="flex items-center gap-2.5">
+            <BrandMark className="h-6 w-6 text-paper" />
+            <div>
+              <p className="font-display text-sm leading-none tracking-tight text-paper">
+                {BRAND_NAME}
+              </p>
+              <p className="mt-1 text-[8px] font-medium uppercase tracking-[0.22em] text-sand/50">
+                A-01 · Deal worksheet · Rev 01
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Flavor strip */}
-        <div className="absolute inset-x-0 bottom-0 border-t border-white/10 bg-ink/70 py-3 backdrop-blur-sm">
+        <div className="absolute inset-x-0 bottom-0 border-t border-signal/35 bg-ink/75 py-3 backdrop-blur-sm">
           <div className="overflow-hidden">
             <div className="animate-marquee flex w-max gap-10 whitespace-nowrap px-4 text-[11px] font-medium uppercase tracking-[0.28em] text-sand/80">
               {[...MARQUEE, ...MARQUEE].map((item, i) => (

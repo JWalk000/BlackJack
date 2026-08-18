@@ -6,12 +6,14 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { AuthProvider } from "@/lib/auth-context";
 import { BillingProvider } from "@/lib/billing/context";
 import { BRAND_NAME } from "@/lib/brand";
+import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
 const display = Fraunces({
   subsets: ["latin"],
   variable: "--font-display",
   display: "swap",
+  style: ["normal", "italic"],
 });
 
 const body = Source_Sans_3({
@@ -21,6 +23,7 @@ const body = Source_Sans_3({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: `${BRAND_NAME} — Build your deal`,
   description:
     "Build ground-up and rehab deals for residential and commercial real estate with full itemized costs and final numbers.",

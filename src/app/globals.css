@@ -279,6 +279,15 @@
   }
 }
 
+@keyframes arc-stroke {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 .animate-rise {
   animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -300,6 +309,20 @@
 }
 .animate-ken {
   animation: ken 22s ease-in-out infinite alternate;
+}
+.animate-arc-stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: arc-stroke 1.15s cubic-bezier(0.22, 1, 0.36, 1) 0.45s both;
+}
+.hero-grid {
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(239, 230, 212, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(239, 230, 212, 0.07) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: radial-gradient(ellipse 80% 70% at 40% 45%, #000 20%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 40% 45%, #000 20%, transparent 75%);
 }
 .texture-grain {
   pointer-events: none;
@@ -547,8 +570,12 @@
   .animate-draw,
   .animate-marquee,
   .animate-ken,
+  .animate-arc-stroke,
   .texture-grain {
     animation: none !important;
+  }
+  .animate-arc-stroke {
+    stroke-dashoffset: 0;
   }
 }
 

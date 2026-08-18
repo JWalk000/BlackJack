@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { BRAND_NAME } from "@/lib/brand";
 import { AuthPanel } from "./AuthPanel";
+import { BrandMark } from "./BrandMark";
 
 function NavLink({
   href,
@@ -26,11 +27,13 @@ function NavLink({
     <Link
       href={href}
       onClick={onClick}
-      className={`inline-flex min-h-11 items-center text-sm font-medium transition ${
+      className={`relative inline-flex min-h-11 items-center text-sm font-medium transition after:absolute after:bottom-2 after:left-0 after:h-px after:w-full after:origin-left after:bg-signal after:transition-transform after:duration-300 after:ease-out ${
+        active ? "after:scale-x-100" : "after:scale-x-0 hover:after:scale-x-100"
+      } ${
         isHome
           ? active
             ? "text-paper"
-            : "text-sand hover:opacity-70"
+            : "text-sand hover:text-paper"
           : active
             ? "text-signal"
             : "text-muted hover:text-ink"
@@ -70,9 +73,14 @@ export function SiteHeader() {
     // Keep a light brand bar on public shares; hide app nav.
     return (
       <header className="print:hidden fixed inset-x-0 top-0 z-50 border-b border-line/90 bg-paper/92 text-ink backdrop-blur-md">
+        <span
+          className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-signal via-brass to-signal"
+          aria-hidden
+        />
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5 sm:px-8">
-          <Link href="/" className="font-display text-xl tracking-tight">
-            {BRAND_NAME}
+          <Link href="/" className="flex items-center gap-2">
+            <BrandMark className="h-6 w-6" />
+            <span className="font-display text-xl tracking-tight">{BRAND_NAME}</span>
           </Link>
           <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
             Shared package
@@ -87,20 +95,36 @@ export function SiteHeader() {
       <header
         className={`print:hidden fixed inset-x-0 top-0 z-50 transition-colors ${
           isHome
-            ? "border-b border-white/10 bg-ink/25 text-paper backdrop-blur-md"
+            ? "border-b border-white/10 bg-ink/55 text-paper shadow-[0_1px_0_0_rgba(232,93,4,0.45)] backdrop-blur-md"
             : "border-b border-line/90 bg-paper/92 text-ink backdrop-blur-md"
         }`}
       >
+        <span
+          className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-signal via-brass to-signal"
+          aria-hidden
+        />
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-5 sm:px-8">
           <Link
             href="/"
-            className="shrink-0 font-display text-2xl tracking-tight transition hover:opacity-90"
+            className="group flex shrink-0 items-center gap-2.5 transition hover:opacity-95"
           >
-            {BRAND_NAME}
+            <BrandMark className="h-8 w-8 transition-transform duration-300 group-hover:-translate-y-px" />
+            <span className="flex flex-col justify-center leading-none">
+              <span className="font-display text-[1.35rem] tracking-tight sm:text-2xl">
+                {BRAND_NAME}
+              </span>
+              <span
+                className={`mt-0.5 hidden text-[9px] font-medium uppercase tracking-[0.28em] min-[400px]:block ${
+                  isHome ? "text-sand/55" : "text-muted"
+                }`}
+              >
+                Deal studio
+              </span>
+            </span>
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden items-center gap-5 md:flex">
+          <nav className="hidden items-center md:flex">
             {/* FIND_DEALS_NAV — re-enable when ready
             <NavLink
               href="/deals/find"
@@ -117,6 +141,10 @@ export function SiteHeader() {
             >
               My deals
             </NavLink>
+            <span
+              className={`mx-3.5 h-1 w-1 rotate-45 ${isHome ? "bg-signal/80" : "bg-signal"}`}
+              aria-hidden
+            />
             <NavLink
               href="/team"
               isHome={isHome}
@@ -124,6 +152,10 @@ export function SiteHeader() {
             >
               Team
             </NavLink>
+            <span
+              className={`mx-3.5 h-1 w-1 rotate-45 ${isHome ? "bg-signal/80" : "bg-signal"}`}
+              aria-hidden
+            />
             <NavLink
               href="/pricing"
               isHome={isHome}
@@ -131,6 +163,10 @@ export function SiteHeader() {
             >
               Pricing
             </NavLink>
+            <span
+              className={`mx-3.5 h-3 w-px ${isHome ? "bg-paper/20" : "bg-line"}`}
+              aria-hidden
+            />
             {user ? (
               <button
                 type="button"
@@ -169,7 +205,7 @@ export function SiteHeader() {
                 }}
                 className={`inline-flex min-h-11 items-center text-sm font-medium transition ${
                   isHome
-                    ? "text-sand hover:opacity-70"
+                    ? "text-sand hover:text-paper"
                     : "text-muted hover:text-ink"
                 }`}
                 title={
@@ -185,8 +221,8 @@ export function SiteHeader() {
               href="/deals/new"
               className={
                 isHome
-                  ? "inline-flex min-h-11 max-w-[11.5rem] items-center justify-center bg-signal px-3 py-2 text-center text-[13px] font-semibold leading-tight text-paper transition hover:bg-brass hover:text-ink lg:max-w-none lg:px-4 lg:text-sm"
-                  : "btn-signal !min-h-11 !max-w-[11.5rem] !px-3 !py-2 !text-center !text-[13px] !leading-tight lg:!max-w-none lg:!px-4 lg:!text-sm"
+                  ? "ml-1 inline-flex min-h-11 max-w-[11.5rem] items-center justify-center bg-signal px-3 py-2 text-center text-[13px] font-semibold leading-tight text-paper shadow-[3px_3px_0_0] shadow-brass/70 transition hover:bg-brass hover:text-ink hover:shadow-ink/20 lg:max-w-none lg:px-4 lg:text-sm"
+                  : "btn-signal ml-1 !min-h-11 !max-w-[11.5rem] !px-3 !py-2 !text-center !text-[13px] !leading-tight lg:!max-w-none lg:!px-4 lg:!text-sm"
               }
             >
               Develop the numbers
